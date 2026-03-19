@@ -6,7 +6,7 @@ import Spinner from '../../components/ui/Spinner/Spinner';
 import {
   UserAddOutlined, EditOutlined, DeleteOutlined,
   SearchOutlined, ReloadOutlined,
-
+  EyeOutlined, EyeInvisibleOutlined,
   MailOutlined, PhoneOutlined, CalendarOutlined,
   ClockCircleOutlined, SafetyOutlined, CloseOutlined,
 } from '@ant-design/icons';
@@ -18,12 +18,12 @@ import {
   ActionsCell, ActionBtn, EmptyState, ErrMsg,
   Overlay, Modal, ModalHead, ModalTitle, CloseBtn,
   FieldGrid, Field, Label, Input, Select,
-  FieldErr, 
+  FieldErr, PwdWrap, PwdInput, PwdEye,
   BtnRow, CancelBtn, SaveBtn,
 } from './UsersListPage.styled';
 import styled, { keyframes } from 'styled-components';
 
-// ─── Detail Panel Styles ────────────────────────────────────────────────────
+// ─── Detail Panel Styles ─────────────────────────────────────────────────────
 
 const slideIn = keyframes`
   from { opacity: 0; transform: translateX(20px); }
@@ -98,13 +98,9 @@ const DetailUsername = styled.p`
   margin-bottom: 10px;
 `;
 
-const DetailBody = styled.div`
-  padding: 16px;
-`;
+const DetailBody = styled.div`padding: 16px;`;
 
-const DetailSection = styled.div`
-  margin-bottom: 16px;
-`;
+const DetailSection = styled.div`margin-bottom: 16px;`;
 
 const DetailSectionTitle = styled.p`
   font-size: 10px;
@@ -148,24 +144,24 @@ const DetailRowValue = styled.p`
   white-space: nowrap;
 `;
 
-// const DetailEditBtn = styled.button`
-//   width: 100%;
-//   padding: 10px;
-//   background: ${({ theme }) => theme.colors.primary};
-//   color: white;
-//   border: none;
-//   border-radius: ${({ theme }) => theme.radii.sm};
-//   font-size: 13px;
-//   font-weight: 500;
-//   cursor: pointer;
-//   display: flex;
-//   align-items: center;
-//   justify-content: center;
-//   gap: 6px;
-//   margin-top: 4px;
-//   transition: background 0.15s;
-//   &:hover { background: ${({ theme }) => theme.colors.primaryDark}; }
-// `;
+const DetailEditBtn = styled.button`
+  width: 100%;
+  padding: 10px;
+  background: ${({ theme }) => theme.colors.primary};
+  color: white;
+  border: none;
+  border-radius: ${({ theme }) => theme.radii.sm};
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  margin-top: 4px;
+  transition: background 0.15s;
+  &:hover { background: ${({ theme }) => theme.colors.primaryDark}; }
+`;
 
 const Divider = styled.div`
   height: 1px;
@@ -187,9 +183,11 @@ const STATUS_VARIANT = {
   active: 'success', inactive: 'warning', suspended: 'danger', deleted: 'default',
 };
 
+// ── FIX 1: Added phone to EMPTY_FORM ────────────────────────────────────────
 const EMPTY_FORM = {
   username: '', email: '', password: '',
-  first_name: '', last_name: '', role_id: 2, status: 'active',
+  first_name: '', last_name: '', phone: '',
+  role_id: 2, status: 'active',
 };
 
 const formatDate = (dateStr) => {
@@ -212,7 +210,7 @@ const UsersListPage = () => {
   const [form,       setForm]       = useState(EMPTY_FORM);
   const [formErrors, setFormErrors] = useState({});
   const [saving,     setSaving]     = useState(false);
-  //const [showPwd,    setShowPwd]    = useState(false);
+  const [showPwd,    setShowPwd]    = useState(false);
 
   const fetchUsers = useCallback(async () => {
     setLoading(true); setError(null);
@@ -236,14 +234,16 @@ const UsersListPage = () => {
     setShowModal(true);
   };
 
+  // ── FIX 2: Added phone to openEdit population ────────────────────────────
   const openEdit = (u) => {
     setEditUser(u);
     setForm({
-      username:   u.username,
-      email:      u.email      || '',
+      username:   u.username    || '',
+      email:      u.email       || '',
       password:   '',
-      first_name: u.first_name || '',
-      last_name:  u.last_name  || '',
+      first_name: u.first_name  || '',
+      last_name:  u.last_name   || '',
+      phone:      u.phone       || '',
       role_id:    u.role_id,
       status:     u.status,
     });
@@ -255,8 +255,15 @@ const UsersListPage = () => {
   const validate = () => {
     const errs = {};
     if (!form.username.trim())                      errs.username = 'Required';
-   // if (!editUser && !form.password)                errs.password = 'Required';
-    //if (form.password && form.password.length < 8) errs.password = 'Min 8 characters';
+    if (!editUser && !form.password)                errs.password = 'Required';
+    if (form.password && form.password.length < 8) errs.password = 'Min 8 characters';
+    // ── FIX 3: Phone format validation ──────────────────────────────────────
+    if (form.phone) {
+      const cleaned = form.phone.replace(/[\s\-\(\)]/g, '');
+      if (!/^\+?[0-9]{7,15}$/.test(cleaned)) {
+        errs.phone = 'Invalid phone number';
+      }
+    }
     return errs;
   };
 
@@ -267,6 +274,7 @@ const UsersListPage = () => {
     try {
       const payload = { ...form };
       if (!payload.password) delete payload.password;
+      if (!payload.phone)    delete payload.phone;  // don't send empty string
       if (editUser) {
         await axiosInstance.put(`/api/users/${editUser.id}`, payload);
       } else {
@@ -357,7 +365,6 @@ const UsersListPage = () => {
                     <Tr
                       key={u.id}
                       onClick={() => setViewUser(u)}
-                       title="Click to view details"
                       style={{
                         cursor: 'pointer',
                         background: viewUser?.id === u.id
@@ -428,7 +435,6 @@ const UsersListPage = () => {
             </DetailHeader>
 
             <DetailBody>
-              {/* Contact Info */}
               <DetailSection>
                 <DetailSectionTitle>Contact</DetailSectionTitle>
                 <DetailRow>
@@ -442,6 +448,7 @@ const UsersListPage = () => {
                   <DetailRowIcon><PhoneOutlined /></DetailRowIcon>
                   <DetailRowContent>
                     <DetailRowLabel>Phone</DetailRowLabel>
+                    {/* ── FIX 4: Now shows real phone value ── */}
                     <DetailRowValue>{viewUser.phone || '—'}</DetailRowValue>
                   </DetailRowContent>
                 </DetailRow>
@@ -449,7 +456,6 @@ const UsersListPage = () => {
 
               <Divider />
 
-              {/* Account Info */}
               <DetailSection>
                 <DetailSectionTitle>Account</DetailSectionTitle>
                 <DetailRow>
@@ -480,16 +486,16 @@ const UsersListPage = () => {
               </DetailSection>
 
               <Divider />
-{/* 
+
               <DetailEditBtn onClick={() => openEdit(viewUser)}>
                 <EditOutlined /> Edit User
-              </DetailEditBtn> */}
+              </DetailEditBtn>
             </DetailBody>
           </DetailPanel>
         )}
       </PageLayout>
 
-      {/* ── Edit/Create Modal ── */}
+      {/* ── Create / Edit Modal ── */}
       {showModal && (
         <Overlay onClick={(e) => e.target === e.currentTarget && setShowModal(false)}>
           <Modal>
@@ -504,6 +510,7 @@ const UsersListPage = () => {
               <ErrMsg style={{ marginBottom: 14 }}>{formErrors._global}</ErrMsg>
             )}
 
+            {/* Row 1: First Name + Last Name */}
             <FieldGrid>
               <Field>
                 <Label>First Name</Label>
@@ -525,19 +532,33 @@ const UsersListPage = () => {
 
             <div style={{ height: 14 }} />
 
-            <Field>
-              <Label>Username *</Label>
-              <Input
-                value={form.username}
-                onChange={f('username')}
-                placeholder="e.g. dr_kumar"
-                $error={!!formErrors.username}
-              />
-              {formErrors.username && <FieldErr>{formErrors.username}</FieldErr>}
-            </Field>
+            {/* Row 2: Username + Phone ── FIX 5: Phone input added here */}
+            <FieldGrid>
+              <Field>
+                <Label>Username *</Label>
+                <Input
+                  value={form.username}
+                  onChange={f('username')}
+                  placeholder="e.g. dr_kumar"
+                  $error={!!formErrors.username}
+                />
+                {formErrors.username && <FieldErr>{formErrors.username}</FieldErr>}
+              </Field>
+              <Field>
+                <Label>Phone</Label>
+                <Input
+                  value={form.phone}
+                  onChange={f('phone')}
+                  placeholder="+91 9876543210"
+                  $error={!!formErrors.phone}
+                />
+                {formErrors.phone && <FieldErr>{formErrors.phone}</FieldErr>}
+              </Field>
+            </FieldGrid>
 
             <div style={{ height: 14 }} />
 
+            {/* Email */}
             <Field>
               <Label>Email</Label>
               <Input
@@ -550,7 +571,8 @@ const UsersListPage = () => {
 
             <div style={{ height: 14 }} />
 
-            {/* <Field>
+            {/* Password */}
+            <Field>
               <Label>
                 {editUser ? 'New Password (leave blank to keep)' : 'Password *'}
               </Label>
@@ -572,8 +594,9 @@ const UsersListPage = () => {
                 </PwdEye>
               </PwdWrap>
               {formErrors.password && <FieldErr>{formErrors.password}</FieldErr>}
-            </Field> */}
+            </Field>
 
+            {/* Row 3: Role + Status */}
             <FieldGrid style={{ marginTop: 14 }}>
               <Field>
                 <Label>Role *</Label>
