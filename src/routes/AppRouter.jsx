@@ -1,19 +1,33 @@
 import React, { lazy, Suspense } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import ProtectedRoute   from '../components/guards/ProtectedRoute';
-import AppLayout        from '../components/layout/AppLayout';
-import Spinner          from '../components/ui/Spinner/Spinner';
-import LoginPage        from '../pages/Auth/LoginPage';
-import NotFoundPage     from '../pages/Errors/NotFoundPage';
+import ProtectedRoute from '../components/guards/ProtectedRoute';
+import RoleGuard from '../components/guards/RoleGuard';
+import AppLayout from '../components/layout/AppLayout';
+import Spinner from '../components/ui/Spinner/Spinner';
+import LoginPage from '../pages/Auth/LoginPage';
+import NotFoundPage from '../pages/Errors/NotFoundPage';
 import UnauthorizedPage from '../pages/Errors/UnauthorizedPage';
-import ErrorPage        from '../pages/Errors/ErrorPage';
+import ErrorPage from '../pages/Errors/ErrorPage';
 
-
-const DashboardPage  = lazy(() => import('../pages/Dashboard/DashboardPage'));
-const SettingsPage   = lazy(() => import('../pages/Settings/SettingsPage'));
-const UsersListPage  = lazy(() => import('../pages/Users/UsersListPage'));
-const StaffListPage  = lazy(() => import('../pages/Staff/StaffListPage'));
+// ─── Lazy imports ─────────────────────────────────────────────────────────────
+const DashboardPage = lazy(() => import('../pages/Dashboard/DashboardPage'));
+const SettingsPage = lazy(() => import('../pages/Settings/SettingsPage'));
+const UsersListPage = lazy(() => import('../pages/Users/UsersListPage'));
+const StaffListPage = lazy(() => import('../pages/Staff/StaffListPage'));
 const ProfilePage = lazy(() => import('../pages/Profile/ProfilePage'));
+
+// ─── Patient module ───────────────────────────────────────────────────────────
+const PatientsListPage = lazy(() => import('../pages/Patients/PatientsListPage'));
+const PatientDetailPage = lazy(() => import('../pages/Patients/PatientDetailPage'));
+
+// ─── Appointment module ───────────────────────────────────────────────────────
+const AppointmentsListPage = lazy(() => import('../pages/Appointments/AppointmentsListPage'));
+const AppointmentDetailPage = lazy(() => import('../pages/Appointments/AppointmentDetailPage'));
+
+// ─── Other modules ────────────────────────────────────────────────────────────
+const PrescriptionsListPage = lazy(() => import('../pages/Prescriptions/PrescriptionsListPage'));
+const RecordsListPage = lazy(() => import('../pages/Records/RecordsListPage'));
+const CalendarPage = lazy(() => import('../pages/Calendar/CalendarPage'));
 
 const Fallback = () => <Spinner size="lg" fullPage />;
 
@@ -28,10 +42,10 @@ const AppRouter = () => (
   <BrowserRouter>
     <Suspense fallback={<Fallback />}>
       <Routes>
-        <Route path="/login"        element={<LoginPage />} />
+        <Route path="/login" element={<LoginPage />} />
         <Route path="/unauthorized" element={<UnauthorizedPage />} />
-        <Route path="/error"        element={<ErrorPage />} />
-        <Route path="/"             element={<Navigate to="/dashboard" replace />} />
+        <Route path="/error" element={<ErrorPage />} />
+        <Route path="/" element={<Navigate to="/dashboard" replace />} />
 
         <Route
           path="/"
@@ -41,20 +55,41 @@ const AppRouter = () => (
             </ProtectedRoute>
           }
         >
-          
-          <Route path="dashboard"       element={<DashboardPage />} />
-          <Route path="users/*"         element={<UsersListPage />} />
-          <Route path="staff/*"         element={<StaffListPage />} />
-          <Route path="settings/*"      element={<SettingsPage />} />
-          <Route path="patients/*"      element={<ComingSoon title="Patients" />} />
-          <Route path="appointments/*"  element={<ComingSoon title="Appointments" />} />
-          <Route path="prescriptions/*" element={<ComingSoon title="Prescriptions" />} />
-          <Route path="billing/*"       element={<ComingSoon title="Billing" />} />
-          <Route path="messages/*"      element={<ComingSoon title="Messages" />} />
-          <Route path="calendar/*"      element={<ComingSoon title="Calendar" />} />
-          <Route path="records/*"       element={<ComingSoon title="Medical Records" />} />
-          <Route path="my-health/*"     element={<ComingSoon title="My Health" />} />
+          <Route path="dashboard" element={<DashboardPage />} />
+          <Route path="users/*" element={<UsersListPage />} />
+          <Route path="staff/*" element={<StaffListPage />} />
+          <Route path="settings/*" element={<SettingsPage />} />
           <Route path="profile" element={<ProfilePage />} />
+
+          {/* ── Patient Module ──────────────────────────────────────── */}
+          <Route
+            path="patients"
+            element={
+              <RoleGuard allowedRoles={['admin', 'doctor', 'nurse', 'receptionist']}>
+                <PatientsListPage />
+              </RoleGuard>
+            }
+          />
+          <Route
+            path="patients/:id"
+            element={
+              <RoleGuard allowedRoles={['admin', 'doctor', 'nurse', 'receptionist']}>
+                <PatientDetailPage />
+              </RoleGuard>
+            }
+          />
+
+          {/* ── Appointment Module ──────────────────────────────────── */}
+          <Route path="appointments" element={<AppointmentsListPage />} />
+          <Route path="appointments/:id" element={<AppointmentDetailPage />} />
+
+          {/* ── Coming Soon placeholders ────────────────────────────── */}
+          <Route path="prescriptions/*" element={<PrescriptionsListPage />} />
+          <Route path="billing/*" element={<ComingSoon title="Billing" />} />
+          <Route path="messages/*" element={<ComingSoon title="Messages" />} />
+          <Route path="calendar/*" element={<CalendarPage />} />
+          <Route path="records/*" element={<RecordsListPage />} />
+          <Route path="my-health/*" element={<ComingSoon title="My Health" />} />
         </Route>
 
         <Route path="*" element={<NotFoundPage />} />

@@ -6,7 +6,7 @@ import Spinner from '../../components/ui/Spinner/Spinner';
 import {
   UserAddOutlined, EditOutlined, DeleteOutlined,
   SearchOutlined, ReloadOutlined,
-
+EyeOutlined, EyeInvisibleOutlined,
   MailOutlined, PhoneOutlined, CalendarOutlined,
   ClockCircleOutlined, SafetyOutlined, CloseOutlined,
 } from '@ant-design/icons';
@@ -18,7 +18,7 @@ import {
   ActionsCell, ActionBtn, EmptyState, ErrMsg,
   Overlay, Modal, ModalHead, ModalTitle, CloseBtn,
   FieldGrid, Field, Label, Input, Select,
-  FieldErr, 
+  FieldErr, PwdWrap, PwdInput, PwdEye,
   BtnRow, CancelBtn, SaveBtn,
 } from './UsersListPage.styled';
 import styled, { keyframes } from 'styled-components';
@@ -187,9 +187,11 @@ const STATUS_VARIANT = {
   active: 'success', inactive: 'warning', suspended: 'danger', deleted: 'default',
 };
 
+
 const EMPTY_FORM = {
   username: '', email: '', password: '',
-  first_name: '', last_name: '', role_id: 2, status: 'active',
+  first_name: '', last_name: '', phone: '',
+  role_id: 2, status: 'active',
 };
 
 const formatDate = (dateStr) => {
@@ -212,7 +214,7 @@ const UsersListPage = () => {
   const [form,       setForm]       = useState(EMPTY_FORM);
   const [formErrors, setFormErrors] = useState({});
   const [saving,     setSaving]     = useState(false);
-  //const [showPwd,    setShowPwd]    = useState(false);
+  const [showPwd,    setShowPwd]    = useState(false);
 
   const fetchUsers = useCallback(async () => {
     setLoading(true); setError(null);
@@ -236,27 +238,27 @@ const UsersListPage = () => {
     setShowModal(true);
   };
 
-  const openEdit = (u) => {
-    setEditUser(u);
-    setForm({
-      username:   u.username,
-      email:      u.email      || '',
-      password:   '',
-      first_name: u.first_name || '',
-      last_name:  u.last_name  || '',
-      role_id:    u.role_id,
-      status:     u.status,
-    });
-    setFormErrors({});
-    setViewUser(null);
-    setShowModal(true);
-  };
-
+ const openEdit = (u) => {
+  setEditUser(u);
+  setForm({
+    username:   u.username,
+    email:      u.email      || '',
+    password:   '',
+    first_name: u.first_name || '',
+    last_name:  u.last_name  || '',
+    phone:      u.phone      || '',  // ← add this
+    role_id:    u.role_id,
+    status:     u.status,
+  });
+  setFormErrors({});
+  setViewUser(null);
+  setShowModal(true);
+};
   const validate = () => {
     const errs = {};
     if (!form.username.trim())                      errs.username = 'Required';
-   // if (!editUser && !form.password)                errs.password = 'Required';
-    //if (form.password && form.password.length < 8) errs.password = 'Min 8 characters';
+   if (!editUser && !form.password)                errs.password = 'Required';
+    if (form.password && form.password.length < 8) errs.password = 'Min 8 characters';
     return errs;
   };
 
@@ -550,6 +552,18 @@ const UsersListPage = () => {
 
             <div style={{ height: 14 }} />
 
+{/* <div style={{ height: 14 }} /> */}
+
+<Field>
+  <Label>Phone</Label>
+  <Input
+    type="tel"
+    value={form.phone}
+    onChange={f('phone')}
+    placeholder="+91 98765 43210"
+    maxLength={13}
+  />
+</Field>
             {/* <Field>
               <Label>
                 {editUser ? 'New Password (leave blank to keep)' : 'Password *'}
@@ -573,6 +587,26 @@ const UsersListPage = () => {
               </PwdWrap>
               {formErrors.password && <FieldErr>{formErrors.password}</FieldErr>}
             </Field> */}
+
+{/* Show password only when creating — not editing */}
+{!editUser && (
+  <Field>
+    <Label>Password *</Label>
+    <PwdWrap>
+      <PwdInput
+        type={showPwd ? 'text' : 'password'}
+        value={form.password}
+        onChange={f('password')}
+        placeholder="Min 8 characters"
+        $error={!!formErrors.password}
+      />
+      <PwdEye onClick={() => setShowPwd((s) => !s)} type="button">
+        {showPwd ? <EyeInvisibleOutlined /> : <EyeOutlined />}
+      </PwdEye>
+    </PwdWrap>
+    {formErrors.password && <FieldErr>{formErrors.password}</FieldErr>}
+  </Field>
+)}
 
             <FieldGrid style={{ marginTop: 14 }}>
               <Field>

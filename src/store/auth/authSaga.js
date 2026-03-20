@@ -25,7 +25,6 @@ function* loginSaga({ payload }) {
     let tenantId = payload.tenant_id;
 
     if (!tenantId) {
-      // Check if tenant_id already cached from previous resolve
       const cached = getTenantId();
       if (cached) {
         tenantId = Number(cached);
@@ -65,6 +64,14 @@ function* loginSaga({ payload }) {
 
     yield put(loginSuccess({ token: access_token, csrfToken: csrf_token, user }));
 
+    // ─── Role-based redirect after login ──────────────────────────────────
+    const role = user?.role || user?.role_slug;
+    if (role === 'patient') {
+      window.location.href = '/my-health';
+    } else {
+      window.location.href = '/dashboard';
+    }
+
   } catch (error) {
     yield put(loginFailure(normalizeError(error)));
   }
@@ -83,6 +90,6 @@ function* logoutSaga() {
 }
 
 export default function* authSaga() {
-  yield takeEvery(loginRequest.type, loginSaga);  // takeEvery not takeLatest
+  yield takeEvery(loginRequest.type, loginSaga);
   yield takeLatest(logoutRequest.type, logoutSaga);
 }

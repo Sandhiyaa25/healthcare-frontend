@@ -1,9 +1,30 @@
-import axiosInstance from './axiosInstance';
+import { getDummyDoctors } from './appointments.api';
 
-export const fetchStaffApi       = (p)     => axiosInstance.get('/api/staff', { params: p });
-export const fetchStaffMemberApi = (id)    => axiosInstance.get(`/api/staff/${id}`);
-export const createStaffApi      = (d)     => axiosInstance.post('/api/staff', d);
-export const updateStaffApi      = (id, d) => axiosInstance.put(`/api/staff/${id}`, d);
-export const deleteStaffApi      = (id)    => axiosInstance.delete(`/api/staff/${id}`);
-export const fetchRolesApi       = ()      => axiosInstance.get('/api/tenants/roles');
-export const fetchUsersApi       = (p)     => axiosInstance.get('/api/users', { params: p });
+// ── Helper ──────────────────────────────────────────────────────────────────
+const delay = (ms) => new Promise((r) => setTimeout(r, ms));
+
+// ── Dummy staff = doctors (re-use from appointments) ────────────────────────
+export const fetchStaffApi = async (params = {}) => {
+    await delay(300);
+    const doctors = getDummyDoctors();
+    return {
+        data: {
+            status: true,
+            data: doctors,
+        },
+    };
+};
+
+export const fetchStaffMemberApi = async (id) => {
+    await delay(200);
+    const doctors = getDummyDoctors();
+    const doc = doctors.find((d) => d.user_id === Number(id));
+    return { data: { status: true, data: doc || null } };
+};
+
+// Stubs for other APIs — not used in the current flow
+export const createStaffApi = async (d) => ({ data: { status: true, data: d } });
+export const updateStaffApi = async (id, d) => ({ data: { status: true, data: d } });
+export const deleteStaffApi = async (id) => ({ data: { status: true, data: null } });
+export const fetchRolesApi = async () => ({ data: { status: true, data: [] } });
+export const fetchUsersApi = async (p) => ({ data: { status: true, data: [] } });
