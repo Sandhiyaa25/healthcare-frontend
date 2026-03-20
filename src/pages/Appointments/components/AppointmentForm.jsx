@@ -34,29 +34,33 @@ const AppointmentForm = ({ open, onClose, onSuccess, initialData }) => {
   useEffect(() => {
     if (!open) return;
     setLoadingDoctors(true);
-    fetchStaffApi({ per_page: 100 })
-      .then((res) => {
-        // /api/staff returns: { status:true, data: [...staff objects] }
-        // Each staff object has: user_id, role_id, role_slug, user: { first_name, last_name }
-        const all = res.data?.data || [];
-        const doctorStaff = all.filter((s) =>
-          s.role_slug === 'doctor' || s.role_name?.toLowerCase() === 'doctor'
-        );
-        setDoctors(doctorStaff);
-      })
-      .catch(() => {
-        // Fallback: try users endpoint (admin only but try anyway)
-        import('../../../api/staff.api').then(({ fetchUsersApi }) => {
-          fetchUsersApi({ per_page: 100 })
-            .then((res) => {
-              const all = res.data?.data || [];
-              setDoctors(all.filter((u) =>
-                (u.role_slug === 'doctor' || u.role_name?.toLowerCase() === 'doctor')
-                && u.status === 'active'
-              ));
-            })
-            .catch(() => setDoctors([]));
+
+    const load = () =>
+      fetchStaffApi({ per_page: 100 })
+        .then((res) => {
+          const raw = res.data?.data;
+          const all = Array.isArray(raw)
+            ? raw
+            : Array.isArray(raw?.staff) ? raw.staff : [];
+
+          const doctors = all.filter((s) => {
+            const isDoctor =
+              s.role_slug === 'doctor' ||
+              s.role_name?.toLowerCase() === 'doctor' ||
+              s.role_name?.toLowerCase()?.includes('doctor');
+            const isActive = !s.status || s.status === 'active';
+            return isDoctor && isActive;
+          });
+          setDoctors(doctors);
         });
+
+    load()
+      .catch(() => {
+        // Staff API failed (401 token expired) — retry once after short delay
+        // to allow axiosInstance refresh interceptor to complete
+        setTimeout(() => {
+          load().catch(() => setDoctors([]));
+        }, 1500);
       })
       .finally(() => setLoadingDoctors(false));
   }, [open]);
@@ -158,10 +162,17 @@ const AppointmentForm = ({ open, onClose, onSuccess, initialData }) => {
 
   // ── Build doctor label — staff API returns different shape than users API ─
   const getDoctorLabel = (d) => {
-    // Staff object shape: { user_id, first_name, last_name } or { user: { first_name } }
-    const first = d.first_name ?? d.user?.first_name ?? '';
-    const last  = d.last_name  ?? d.user?.last_name  ?? '';
-    const name  = `${first} ${last}`.trim();
+    const isEncrypted = (val) =>
+      typeof val === 'string' &&
+      val.length > 40 &&
+      /^[A-Za-z0-9+/=\s]+$/.test(val) &&
+      val.includes('=');
+
+    const rawFirst = d.first_name ?? d.user?.first_name ?? '';
+    const rawLast  = d.last_name  ?? d.user?.last_name  ?? '';
+    const first    = isEncrypted(rawFirst) ? '' : rawFirst;
+    const last     = isEncrypted(rawLast)  ? '' : rawLast;
+    const name     = `${first} ${last}`.trim();
     return name || d.username || `Doctor #${d.user_id || d.id}`;
   };
 
@@ -218,11 +229,21 @@ const AppointmentForm = ({ open, onClose, onSuccess, initialData }) => {
                 filterOption={(input, option) =>
                   option?.label?.toLowerCase().includes(input.toLowerCase())
                 }
-                options={patients.map((p) => ({
-                  value: p.id,
-                  label: `${p.first_name || ''} ${p.last_name || ''}`.trim()
-                         || `Patient #${p.id}`,
-                }))}
+                options={patients.map((p) => {
+                  const isEncrypted = (val) =>
+                    typeof val === 'string' &&
+                    val.length > 40 &&
+                    /^[A-Za-z0-9+/=\s]+$/.test(val) &&
+                    val.includes('=');
+
+                  const first = isEncrypted(p.first_name) ? '' : (p.first_name || '');
+                  const last  = isEncrypted(p.last_name)  ? '' : (p.last_name  || '');
+                  const name  = `${first} ${last}`.trim();
+                  return {
+                    value: p.id,
+                    label: name || `Patient #${p.id}`,
+                  };
+                })}
               />
             </Form.Item>
           )}

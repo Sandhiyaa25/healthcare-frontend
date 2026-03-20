@@ -1,7 +1,8 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Modal, Form, Input, Select, DatePicker, Row, Col, Alert } from 'antd';
 import dayjs from 'dayjs';
 import usePatients from '../../../hooks/usePatient';
+import axiosInstance from '../../../api/axiosInstance';
 import { FormSection, SectionTitle } from './PatientForm.styled';
 
 const { Option } = Select;
@@ -12,6 +13,22 @@ const PatientForm = ({ open, onClose, onSuccess, initialData }) => {
   const { saving, error, createPatient, updatePatient, clearError } = usePatients();
   const isEdit = !!initialData;
   const wasSavingRef = useRef(false);
+  const [patientUsers, setPatientUsers] = useState([]);
+
+  // Load users with patient role for the Link User dropdown
+  useEffect(() => {
+    if (!open) return;
+    axiosInstance
+      .get('/api/users')
+      .then((res) => {
+        const all = res.data?.data || [];
+        const patients = all.filter(
+          (u) => u.role_slug === 'patient' || u.role_name?.toLowerCase() === 'patient'
+        );
+        setPatientUsers(patients);
+      })
+      .catch(() => setPatientUsers([]));
+  }, [open]);
 
   // ─── Pre-fill form on edit, reset on create ──────────────────────────────
   useEffect(() => {
@@ -150,6 +167,26 @@ const PatientForm = ({ open, onClose, onSuccess, initialData }) => {
               </Form.Item>
             </Col>
           </Row>
+          <Form.Item
+            name="user_id"
+            label="Link User Account (optional)"
+            extra="Select the patient's login account to allow them to access the portal"
+          >
+            <Select
+              placeholder="Select patient user account"
+              allowClear
+              showSearch
+              filterOption={(input, option) =>
+                option?.label?.toLowerCase().includes(input.toLowerCase())
+              }
+              options={patientUsers.map((u) => ({
+                value: u.id,
+                label: `${u.first_name || ''} ${u.last_name || ''}`.trim()
+                       ? `${u.first_name || ''} ${u.last_name || ''}`.trim() + ` (@${u.username})`
+                       : `@${u.username}`,
+              }))}
+            />
+          </Form.Item>
         </FormSection>
 
         <FormSection>

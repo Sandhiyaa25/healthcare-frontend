@@ -1,8 +1,9 @@
 import React from 'react';
 import { Table, Popconfirm, Tooltip } from 'antd';
 import { EyeOutlined, EditOutlined, StopOutlined } from '@ant-design/icons';
+import dayjs from 'dayjs';
+import utc from 'dayjs/plugin/utc';
 import StatusBadge from './StatusBadge';
-import { formatDate } from '../../../utils/dateUtils';
 import useAppointments from '../../../hooks/useAppointments';
 import {
   TableWrap,
@@ -12,6 +13,9 @@ import {
   NamePrimary,
   NameSub,
 } from './AppointmentTable.styled';
+
+dayjs.extend(utc);
+
 
 const TERMINAL_STATUSES = ['cancelled', 'completed'];
 
@@ -25,8 +29,7 @@ const calcDuration = (start, end) => {
 
 const formatApptTime = (appt) => {
   if (!appt.appointment_date || !appt.start_time) return '—';
-  const time = appt.start_time.slice(0, 5);
-  return `${formatDate(appt.appointment_date)} ${time}`;
+  return dayjs.utc(`${appt.appointment_date} ${appt.start_time}`).local().format('DD MMM YYYY HH:mm');
 };
 
 const capitalize = (s) => s ? s.charAt(0).toUpperCase() + s.slice(1).replace('_', ' ') : '—';

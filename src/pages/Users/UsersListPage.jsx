@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import axiosInstance from '../../api/axiosInstance';
+import { fetchRolesApi } from '../../api/staff.api';
 import { normalizeError } from '../../utils/errorNormalizer';
 import Badge   from '../../components/ui/Badge/Badge';
 import Spinner from '../../components/ui/Spinner/Spinner';
@@ -171,13 +172,6 @@ const Divider = styled.div`
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const ROLE_OPTIONS = [
-  { id: 2, name: 'Doctor' },
-  { id: 3, name: 'Nurse' },
-  { id: 4, name: 'Receptionist' },
-  { id: 5, name: 'Pharmacist' },
-  { id: 6, name: 'Patient' },
-];
 
 const STATUS_VARIANT = {
   active: 'success', inactive: 'warning', suspended: 'danger', deleted: 'default',
@@ -187,7 +181,7 @@ const STATUS_VARIANT = {
 const EMPTY_FORM = {
   username: '', email: '', password: '',
   first_name: '', last_name: '', phone: '',
-  role_id: 2, status: 'active',
+  role_id: '', status: 'active',
 };
 
 const formatDate = (dateStr) => {
@@ -211,6 +205,16 @@ const UsersListPage = () => {
   const [formErrors, setFormErrors] = useState({});
   const [saving,     setSaving]     = useState(false);
   const [showPwd,    setShowPwd]    = useState(false);
+  const [roles,      setRoles]      = useState([]);
+
+  useEffect(() => {
+    fetchRolesApi()
+      .then((res) => {
+        const list = res.data?.data || [];
+        setRoles(list);
+      })
+      .catch(() => setRoles([]));
+  }, []);
 
   const fetchUsers = useCallback(async () => {
     setLoading(true); setError(null);
@@ -228,7 +232,7 @@ const UsersListPage = () => {
 
   const openCreate = () => {
     setEditUser(null);
-    setForm(EMPTY_FORM);
+    setForm({ ...EMPTY_FORM, role_id: roles[0]?.id ?? '' });
     setFormErrors({});
     setViewUser(null);
     setShowModal(true);
@@ -606,7 +610,7 @@ const UsersListPage = () => {
                     setForm((p) => ({ ...p, role_id: Number(e.target.value) }))
                   }
                 >
-                  {ROLE_OPTIONS.map((r) => (
+                  {roles.map((r) => (
                     <option key={r.id} value={r.id}>{r.name}</option>
                   ))}
                 </Select>

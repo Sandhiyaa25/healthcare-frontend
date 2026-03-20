@@ -24,6 +24,13 @@ const PatientDetailPage = lazy(() => import('../pages/Patients/PatientDetailPage
 const AppointmentsListPage  = lazy(() => import('../pages/Appointments/AppointmentsListPage'));
 const AppointmentDetailPage = lazy(() => import('../pages/Appointments/AppointmentDetailPage'));
 
+// ─── Messages module ──────────────────────────────────────────────────────────
+const MessagesPage = lazy(() => import('../pages/Messages/MessagesPage'));
+
+// ─── Billing module ───────────────────────────────────────────────────────────
+const BillingListPage   = lazy(() => import('../pages/Billing/BillingListPage'));
+const InvoiceDetailPage = lazy(() => import('../pages/Billing/InvoiceDetailPage'));
+
 const Fallback = () => <Spinner size="lg" fullPage />;
 
 const ComingSoon = ({ title }) => (
@@ -80,8 +87,9 @@ const AppRouter = () => (
 
           {/* ── Coming Soon placeholders ────────────────────────────── */}
           <Route path="prescriptions/*" element={<ComingSoon title="Prescriptions" />} />
-          <Route path="billing/*"       element={<ComingSoon title="Billing" />} />
-          <Route path="messages/*"      element={<ComingSoon title="Messages" />} />
+          <Route path="billing"          element={<BillingListPage />} />
+          <Route path="billing/:id"     element={<InvoiceDetailPage />} />
+          <Route path="messages/*"      element={<MessagesPage />} />
           <Route path="calendar/*"      element={<ComingSoon title="Calendar" />} />
           <Route path="records/*"       element={<ComingSoon title="Medical Records" />} />
           <Route path="my-health/*"     element={<ComingSoon title="My Health" />} />
