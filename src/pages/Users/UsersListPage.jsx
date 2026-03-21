@@ -1,12 +1,13 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import axiosInstance from '../../api/axiosInstance';
+import { fetchRolesApi } from '../../api/staff.api';
 import { normalizeError } from '../../utils/errorNormalizer';
 import Badge   from '../../components/ui/Badge/Badge';
 import Spinner from '../../components/ui/Spinner/Spinner';
 import {
   UserAddOutlined, EditOutlined, DeleteOutlined,
   SearchOutlined, ReloadOutlined,
-
+  EyeOutlined, EyeInvisibleOutlined,
   MailOutlined, PhoneOutlined, CalendarOutlined,
   ClockCircleOutlined, SafetyOutlined, CloseOutlined,
 } from '@ant-design/icons';
@@ -18,12 +19,12 @@ import {
   ActionsCell, ActionBtn, EmptyState, ErrMsg,
   Overlay, Modal, ModalHead, ModalTitle, CloseBtn,
   FieldGrid, Field, Label, Input, Select,
-  FieldErr, 
+  FieldErr, PwdWrap, PwdInput, PwdEye,
   BtnRow, CancelBtn, SaveBtn,
 } from './UsersListPage.styled';
 import styled, { keyframes } from 'styled-components';
 
-// ─── Detail Panel Styles ────────────────────────────────────────────────────
+// ─── Detail Panel Styles ─────────────────────────────────────────────────────
 
 const slideIn = keyframes`
   from { opacity: 0; transform: translateX(20px); }
@@ -98,13 +99,9 @@ const DetailUsername = styled.p`
   margin-bottom: 10px;
 `;
 
-const DetailBody = styled.div`
-  padding: 16px;
-`;
+const DetailBody = styled.div`padding: 16px;`;
 
-const DetailSection = styled.div`
-  margin-bottom: 16px;
-`;
+const DetailSection = styled.div`margin-bottom: 16px;`;
 
 const DetailSectionTitle = styled.p`
   font-size: 10px;
@@ -148,24 +145,24 @@ const DetailRowValue = styled.p`
   white-space: nowrap;
 `;
 
-// const DetailEditBtn = styled.button`
-//   width: 100%;
-//   padding: 10px;
-//   background: ${({ theme }) => theme.colors.primary};
-//   color: white;
-//   border: none;
-//   border-radius: ${({ theme }) => theme.radii.sm};
-//   font-size: 13px;
-//   font-weight: 500;
-//   cursor: pointer;
-//   display: flex;
-//   align-items: center;
-//   justify-content: center;
-//   gap: 6px;
-//   margin-top: 4px;
-//   transition: background 0.15s;
-//   &:hover { background: ${({ theme }) => theme.colors.primaryDark}; }
-// `;
+const DetailEditBtn = styled.button`
+  width: 100%;
+  padding: 10px;
+  background: ${({ theme }) => theme.colors.primary};
+  color: white;
+  border: none;
+  border-radius: ${({ theme }) => theme.radii.sm};
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  margin-top: 4px;
+  transition: background 0.15s;
+  &:hover { background: ${({ theme }) => theme.colors.primaryDark}; }
+`;
 
 const Divider = styled.div`
   height: 1px;
@@ -173,23 +170,28 @@ const Divider = styled.div`
   margin: 12px 0;
 `;
 
+const InfoNote = styled.div`
+  padding: 8px 12px;
+  background: ${({ theme }) => theme.colors.primaryLight};
+  border-radius: ${({ theme }) => theme.radii.sm};
+  font-size: 12px;
+  color: ${({ theme }) => theme.colors.primary};
+  margin-top: -8px;
+  border-left: 3px solid ${({ theme }) => theme.colors.primary};
+`;
+
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const ROLE_OPTIONS = [
-  { id: 2, name: 'Doctor' },
-  { id: 3, name: 'Nurse' },
-  { id: 4, name: 'Receptionist' },
-  { id: 5, name: 'Pharmacist' },
-  { id: 6, name: 'Patient' },
-];
 
 const STATUS_VARIANT = {
   active: 'success', inactive: 'warning', suspended: 'danger', deleted: 'default',
 };
 
+// ── FIX 1: Added phone to EMPTY_FORM ────────────────────────────────────────
 const EMPTY_FORM = {
   username: '', email: '', password: '',
-  first_name: '', last_name: '', role_id: 2, status: 'active',
+  first_name: '', last_name: '', phone: '',
+  role_id: 0, status: 'active',
 };
 
 const formatDate = (dateStr) => {
@@ -212,7 +214,34 @@ const UsersListPage = () => {
   const [form,       setForm]       = useState(EMPTY_FORM);
   const [formErrors, setFormErrors] = useState({});
   const [saving,     setSaving]     = useState(false);
-  //const [showPwd,    setShowPwd]    = useState(false);
+  const [showPwd,    setShowPwd]    = useState(false);
+  const [roles,      setRoles]      = useState([]);
+
+  useEffect(() => {
+    const loadRoles = () => {
+      fetchRolesApi()
+        .then((res) => {
+          const list = res.data?.data || [];
+          if (list.length > 0) {
+            setRoles(list);
+            // Auto-select first role if form still has placeholder 0
+            setForm((prev) =>
+              prev.role_id === 0
+                ? { ...prev, role_id: list[0].id }
+                : prev
+            );
+          } else {
+            // Empty result — retry once after 1 s (transient 500)
+            setTimeout(loadRoles, 1000);
+          }
+        })
+        .catch(() => {
+          // Network/auth failure — retry once after 1 s
+          setTimeout(loadRoles, 1000);
+        });
+    };
+    loadRoles();
+  }, []);
 
   const fetchUsers = useCallback(async () => {
     setLoading(true); setError(null);
@@ -230,20 +259,22 @@ const UsersListPage = () => {
 
   const openCreate = () => {
     setEditUser(null);
-    setForm(EMPTY_FORM);
+    setForm({ ...EMPTY_FORM, role_id: roles.length > 0 ? roles[0].id : 0 });
     setFormErrors({});
     setViewUser(null);
     setShowModal(true);
   };
 
+  // ── FIX 2: Added phone to openEdit population ────────────────────────────
   const openEdit = (u) => {
     setEditUser(u);
     setForm({
-      username:   u.username,
-      email:      u.email      || '',
+      username:   u.username    || '',
+      email:      u.email       || '',
       password:   '',
-      first_name: u.first_name || '',
-      last_name:  u.last_name  || '',
+      first_name: u.first_name  || '',
+      last_name:  u.last_name   || '',
+      phone:      u.phone       || '',
       role_id:    u.role_id,
       status:     u.status,
     });
@@ -254,9 +285,26 @@ const UsersListPage = () => {
 
   const validate = () => {
     const errs = {};
+    if (!form.role_id || form.role_id === 0)        errs.role_id = 'Please select a role';
     if (!form.username.trim())                      errs.username = 'Required';
-   // if (!editUser && !form.password)                errs.password = 'Required';
-    //if (form.password && form.password.length < 8) errs.password = 'Min 8 characters';
+    if (!editUser && !form.password)                errs.password = 'Required';
+    if (form.password && form.password.length < 8)  errs.password = 'Min 8 characters';
+    // BUG FIX: validate email on frontend so user sees inline error
+    // instead of a raw 422 from the API.
+    if (!editUser) {
+      if (!form.email.trim()) {
+        errs.email = 'Email is required';
+      } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())) {
+        errs.email = 'Enter a valid email address';
+      }
+    }
+    // ── FIX 3: Phone format validation ──────────────────────────────────────
+    if (form.phone) {
+      const cleaned = form.phone.replace(/[\s\-\(\)]/g, '');
+      if (!/^\+?[0-9]{7,15}$/.test(cleaned)) {
+        errs.phone = 'Invalid phone number';
+      }
+    }
     return errs;
   };
 
@@ -265,11 +313,21 @@ const UsersListPage = () => {
     if (Object.keys(errs).length) { setFormErrors(errs); return; }
     setSaving(true); setFormErrors({});
     try {
-      const payload = { ...form };
-      if (!payload.password) delete payload.password;
+      // BUG FIX: always cast role_id to Number — JSON may deserialise it
+      // as a string depending on the select element's value type.
+      const payload = { ...form, role_id: Number(form.role_id) };
+
+      if (!payload.phone) delete payload.phone;     // don't send empty string
+
       if (editUser) {
+        // BUG FIX: backend update() explicitly rejects 'password' and
+        // does not support email changes — remove both from PUT payload.
+        delete payload.password;
+        delete payload.email;
         await axiosInstance.put(`/api/users/${editUser.id}`, payload);
       } else {
+        // create: password required — only omit if somehow blank (validate() catches it)
+        if (!payload.password) delete payload.password;
         await axiosInstance.post('/api/users', payload);
       }
       setShowModal(false);
@@ -357,7 +415,6 @@ const UsersListPage = () => {
                     <Tr
                       key={u.id}
                       onClick={() => setViewUser(u)}
-                       title="Click to view details"
                       style={{
                         cursor: 'pointer',
                         background: viewUser?.id === u.id
@@ -428,7 +485,6 @@ const UsersListPage = () => {
             </DetailHeader>
 
             <DetailBody>
-              {/* Contact Info */}
               <DetailSection>
                 <DetailSectionTitle>Contact</DetailSectionTitle>
                 <DetailRow>
@@ -442,6 +498,7 @@ const UsersListPage = () => {
                   <DetailRowIcon><PhoneOutlined /></DetailRowIcon>
                   <DetailRowContent>
                     <DetailRowLabel>Phone</DetailRowLabel>
+                    {/* ── FIX 4: Now shows real phone value ── */}
                     <DetailRowValue>{viewUser.phone || '—'}</DetailRowValue>
                   </DetailRowContent>
                 </DetailRow>
@@ -449,7 +506,6 @@ const UsersListPage = () => {
 
               <Divider />
 
-              {/* Account Info */}
               <DetailSection>
                 <DetailSectionTitle>Account</DetailSectionTitle>
                 <DetailRow>
@@ -480,16 +536,16 @@ const UsersListPage = () => {
               </DetailSection>
 
               <Divider />
-{/* 
+
               <DetailEditBtn onClick={() => openEdit(viewUser)}>
                 <EditOutlined /> Edit User
-              </DetailEditBtn> */}
+              </DetailEditBtn>
             </DetailBody>
           </DetailPanel>
         )}
       </PageLayout>
 
-      {/* ── Edit/Create Modal ── */}
+      {/* ── Create / Edit Modal ── */}
       {showModal && (
         <Overlay onClick={(e) => e.target === e.currentTarget && setShowModal(false)}>
           <Modal>
@@ -504,6 +560,7 @@ const UsersListPage = () => {
               <ErrMsg style={{ marginBottom: 14 }}>{formErrors._global}</ErrMsg>
             )}
 
+            {/* Row 1: First Name + Last Name */}
             <FieldGrid>
               <Field>
                 <Label>First Name</Label>
@@ -525,19 +582,33 @@ const UsersListPage = () => {
 
             <div style={{ height: 14 }} />
 
-            <Field>
-              <Label>Username *</Label>
-              <Input
-                value={form.username}
-                onChange={f('username')}
-                placeholder="e.g. dr_kumar"
-                $error={!!formErrors.username}
-              />
-              {formErrors.username && <FieldErr>{formErrors.username}</FieldErr>}
-            </Field>
+            {/* Row 2: Username + Phone ── FIX 5: Phone input added here */}
+            <FieldGrid>
+              <Field>
+                <Label>Username *</Label>
+                <Input
+                  value={form.username}
+                  onChange={f('username')}
+                  placeholder="e.g. dr_kumar"
+                  $error={!!formErrors.username}
+                />
+                {formErrors.username && <FieldErr>{formErrors.username}</FieldErr>}
+              </Field>
+              <Field>
+                <Label>Phone</Label>
+                <Input
+                  value={form.phone}
+                  onChange={f('phone')}
+                  placeholder="+91 9876543210"
+                  $error={!!formErrors.phone}
+                />
+                {formErrors.phone && <FieldErr>{formErrors.phone}</FieldErr>}
+              </Field>
+            </FieldGrid>
 
             <div style={{ height: 14 }} />
 
+            {/* Email */}
             <Field>
               <Label>Email</Label>
               <Input
@@ -545,12 +616,15 @@ const UsersListPage = () => {
                 value={form.email}
                 onChange={f('email')}
                 placeholder="email@hospital.com"
+                $error={!!formErrors.email}
               />
+              {formErrors.email && <FieldErr>{formErrors.email}</FieldErr>}
             </Field>
 
             <div style={{ height: 14 }} />
 
-            {/* <Field>
+            {/* Password */}
+            <Field>
               <Label>
                 {editUser ? 'New Password (leave blank to keep)' : 'Password *'}
               </Label>
@@ -572,8 +646,9 @@ const UsersListPage = () => {
                 </PwdEye>
               </PwdWrap>
               {formErrors.password && <FieldErr>{formErrors.password}</FieldErr>}
-            </Field> */}
+            </Field>
 
+            {/* Row 3: Role + Status */}
             <FieldGrid style={{ marginTop: 14 }}>
               <Field>
                 <Label>Role *</Label>
@@ -583,10 +658,14 @@ const UsersListPage = () => {
                     setForm((p) => ({ ...p, role_id: Number(e.target.value) }))
                   }
                 >
-                  {ROLE_OPTIONS.map((r) => (
-                    <option key={r.id} value={r.id}>{r.name}</option>
-                  ))}
+                  {roles.length === 0
+                    ? <option value={0} disabled>Loading roles...</option>
+                    : roles.map((r) => (
+                        <option key={r.id} value={r.id}>{r.name}</option>
+                      ))
+                  }
                 </Select>
+                {formErrors.role_id && <FieldErr>{formErrors.role_id}</FieldErr>}
               </Field>
               <Field>
                 <Label>Status</Label>
@@ -598,10 +677,21 @@ const UsersListPage = () => {
               </Field>
             </FieldGrid>
 
+            {form.role_id === roles.find(r => r.slug === 'patient')?.id && (
+              <InfoNote>
+                A patient record will be automatically created and linked
+                when you create this user.
+              </InfoNote>
+            )}
+
             <BtnRow>
               <CancelBtn onClick={() => setShowModal(false)}>Cancel</CancelBtn>
-              <SaveBtn onClick={handleSave} disabled={saving}>
-                {saving ? 'Saving...' : editUser ? 'Update User' : 'Create User'}
+              <SaveBtn onClick={handleSave} disabled={saving || roles.length === 0}>
+                {saving
+                  ? 'Saving...'
+                  : roles.length === 0
+                  ? 'Loading...'
+                  : editUser ? 'Update User' : 'Create User'}
               </SaveBtn>
             </BtnRow>
           </Modal>
