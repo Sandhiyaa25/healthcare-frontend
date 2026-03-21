@@ -30,7 +30,14 @@ const InvoiceForm = ({ onClose, onSuccess }) => {
       .get('/api/appointments', { params: { per_page: 100 } })
       .then((res) => {
         const d = res.data?.data?.appointments || res.data?.data || [];
-        setAppointments(Array.isArray(d) ? d : []);
+        const all = Array.isArray(d) ? d : [];
+        // BUSINESS RULE: Only confirmed or completed appointments can be invoiced.
+        // Scheduled/cancelled appointments are filtered out so receptionist
+        // cannot accidentally bill for an unconfirmed or cancelled visit.
+        const billable = all.filter(
+          (a) => a.status === 'confirmed' || a.status === 'completed'
+        );
+        setAppointments(billable);
       })
       .catch(() => {})
       .finally(() => setApptLoading(false));
@@ -87,10 +94,10 @@ const InvoiceForm = ({ onClose, onSuccess }) => {
         <Field style={{ marginBottom: 14 }}>
           <Label>Appointment *</Label>
           <Select value={form.appointment_id} onChange={f('appointment_id')}>
-            <option value="">{apptLoading ? 'Loading...' : '-- Select appointment --'}</option>
+            <option value="">{apptLoading ? 'Loading...' : appointments.length === 0 ? 'No confirmed appointments available' : '-- Select appointment --'}</option>
             {appointments.map((a) => (
               <option key={a.id} value={a.id}>
-                #{a.id} — {a.patient_name || 'Patient'} — {formatDate(a.appointment_date)}
+                #{a.id} — {a.patient_name || 'Patient'} — {formatDate(a.appointment_date)} [{a.status}]
               </option>
             ))}
           </Select>

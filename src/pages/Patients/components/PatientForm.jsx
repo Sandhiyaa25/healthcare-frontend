@@ -22,6 +22,7 @@ const PatientForm = ({ open, onClose, onSuccess, initialData }) => {
       .get('/api/users')
       .then((res) => {
         const all = res.data?.data || [];
+        // Filter to only users with patient role
         const patients = all.filter(
           (u) => u.role_slug === 'patient' || u.role_name?.toLowerCase() === 'patient'
         );

@@ -170,6 +170,16 @@ const Divider = styled.div`
   margin: 12px 0;
 `;
 
+const InfoNote = styled.div`
+  padding: 8px 12px;
+  background: ${({ theme }) => theme.colors.primaryLight};
+  border-radius: ${({ theme }) => theme.radii.sm};
+  font-size: 12px;
+  color: ${({ theme }) => theme.colors.primary};
+  margin-top: -8px;
+  border-left: 3px solid ${({ theme }) => theme.colors.primary};
+`;
+
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 
@@ -181,7 +191,7 @@ const STATUS_VARIANT = {
 const EMPTY_FORM = {
   username: '', email: '', password: '',
   first_name: '', last_name: '', phone: '',
-  role_id: '', status: 'active',
+  role_id: 0, status: 'active',
 };
 
 const formatDate = (dateStr) => {
@@ -208,12 +218,29 @@ const UsersListPage = () => {
   const [roles,      setRoles]      = useState([]);
 
   useEffect(() => {
-    fetchRolesApi()
-      .then((res) => {
-        const list = res.data?.data || [];
-        setRoles(list);
-      })
-      .catch(() => setRoles([]));
+    const loadRoles = () => {
+      fetchRolesApi()
+        .then((res) => {
+          const list = res.data?.data || [];
+          if (list.length > 0) {
+            setRoles(list);
+            // Auto-select first role if form still has placeholder 0
+            setForm((prev) =>
+              prev.role_id === 0
+                ? { ...prev, role_id: list[0].id }
+                : prev
+            );
+          } else {
+            // Empty result — retry once after 1 s (transient 500)
+            setTimeout(loadRoles, 1000);
+          }
+        })
+        .catch(() => {
+          // Network/auth failure — retry once after 1 s
+          setTimeout(loadRoles, 1000);
+        });
+    };
+    loadRoles();
   }, []);
 
   const fetchUsers = useCallback(async () => {
@@ -232,7 +259,7 @@ const UsersListPage = () => {
 
   const openCreate = () => {
     setEditUser(null);
-    setForm({ ...EMPTY_FORM, role_id: roles[0]?.id ?? '' });
+    setForm({ ...EMPTY_FORM, role_id: roles.length > 0 ? roles[0].id : 0 });
     setFormErrors({});
     setViewUser(null);
     setShowModal(true);
@@ -258,9 +285,19 @@ const UsersListPage = () => {
 
   const validate = () => {
     const errs = {};
+    if (!form.role_id || form.role_id === 0)        errs.role_id = 'Please select a role';
     if (!form.username.trim())                      errs.username = 'Required';
     if (!editUser && !form.password)                errs.password = 'Required';
-    if (form.password && form.password.length < 8) errs.password = 'Min 8 characters';
+    if (form.password && form.password.length < 8)  errs.password = 'Min 8 characters';
+    // BUG FIX: validate email on frontend so user sees inline error
+    // instead of a raw 422 from the API.
+    if (!editUser) {
+      if (!form.email.trim()) {
+        errs.email = 'Email is required';
+      } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())) {
+        errs.email = 'Enter a valid email address';
+      }
+    }
     // ── FIX 3: Phone format validation ──────────────────────────────────────
     if (form.phone) {
       const cleaned = form.phone.replace(/[\s\-\(\)]/g, '');
@@ -276,12 +313,21 @@ const UsersListPage = () => {
     if (Object.keys(errs).length) { setFormErrors(errs); return; }
     setSaving(true); setFormErrors({});
     try {
-      const payload = { ...form };
-      if (!payload.password) delete payload.password;
-      if (!payload.phone)    delete payload.phone;  // don't send empty string
+      // BUG FIX: always cast role_id to Number — JSON may deserialise it
+      // as a string depending on the select element's value type.
+      const payload = { ...form, role_id: Number(form.role_id) };
+
+      if (!payload.phone) delete payload.phone;     // don't send empty string
+
       if (editUser) {
+        // BUG FIX: backend update() explicitly rejects 'password' and
+        // does not support email changes — remove both from PUT payload.
+        delete payload.password;
+        delete payload.email;
         await axiosInstance.put(`/api/users/${editUser.id}`, payload);
       } else {
+        // create: password required — only omit if somehow blank (validate() catches it)
+        if (!payload.password) delete payload.password;
         await axiosInstance.post('/api/users', payload);
       }
       setShowModal(false);
@@ -570,7 +616,9 @@ const UsersListPage = () => {
                 value={form.email}
                 onChange={f('email')}
                 placeholder="email@hospital.com"
+                $error={!!formErrors.email}
               />
+              {formErrors.email && <FieldErr>{formErrors.email}</FieldErr>}
             </Field>
 
             <div style={{ height: 14 }} />
@@ -610,10 +658,14 @@ const UsersListPage = () => {
                     setForm((p) => ({ ...p, role_id: Number(e.target.value) }))
                   }
                 >
-                  {roles.map((r) => (
-                    <option key={r.id} value={r.id}>{r.name}</option>
-                  ))}
+                  {roles.length === 0
+                    ? <option value={0} disabled>Loading roles...</option>
+                    : roles.map((r) => (
+                        <option key={r.id} value={r.id}>{r.name}</option>
+                      ))
+                  }
                 </Select>
+                {formErrors.role_id && <FieldErr>{formErrors.role_id}</FieldErr>}
               </Field>
               <Field>
                 <Label>Status</Label>
@@ -625,10 +677,21 @@ const UsersListPage = () => {
               </Field>
             </FieldGrid>
 
+            {form.role_id === roles.find(r => r.slug === 'patient')?.id && (
+              <InfoNote>
+                A patient record will be automatically created and linked
+                when you create this user.
+              </InfoNote>
+            )}
+
             <BtnRow>
               <CancelBtn onClick={() => setShowModal(false)}>Cancel</CancelBtn>
-              <SaveBtn onClick={handleSave} disabled={saving}>
-                {saving ? 'Saving...' : editUser ? 'Update User' : 'Create User'}
+              <SaveBtn onClick={handleSave} disabled={saving || roles.length === 0}>
+                {saving
+                  ? 'Saving...'
+                  : roles.length === 0
+                  ? 'Loading...'
+                  : editUser ? 'Update User' : 'Create User'}
               </SaveBtn>
             </BtnRow>
           </Modal>
