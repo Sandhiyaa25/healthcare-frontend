@@ -1,16 +1,44 @@
-import { put, takeLatest, call } from 'redux-saga/effects';
-import { fetchRequest, fetchSuccess, fetchFailure } from './calendarSlice';
-import { fetchCalendarEventsApi } from '../../api/calendar.api';
+import { call, put, takeLatest } from 'redux-saga/effects';
+import { fetchCalendarEventsApi, fetchCalendarByDateApi } from '../../api/calendar.api';
+import {
+  fetchEventsRequest,    fetchEventsSuccess,    fetchEventsFailure,
+  fetchDayEventsRequest, fetchDayEventsSuccess, fetchDayEventsFailure,
+} from './calendarSlice';
+import { normalizeError } from '../../utils/errorNormalizer';
 
-function* fetchSaga(action) {
+function* fetchEventsSaga({ payload = {} }) {
   try {
-    const response = yield call(fetchCalendarEventsApi, action.payload);
-    yield put(fetchSuccess(response.data));
+    const { startDate, endDate, doctorId, status, month, year } = payload;
+    const params = {
+      start_date: startDate,
+      end_date:   endDate,
+    };
+    if (doctorId) params.doctor_id = doctorId;
+    if (status)   params.status    = status;
+
+    const res    = yield call(fetchCalendarEventsApi, params);
+    const raw    = res.data?.data;
+    const events = Array.isArray(raw) ? raw : [];
+
+    yield put(fetchEventsSuccess({ events, month, year }));
   } catch (e) {
-    yield put(fetchFailure(e.message));
+    yield put(fetchEventsFailure(normalizeError(e).message));
+  }
+}
+
+function* fetchDayEventsSaga({ payload }) {
+  try {
+    const { date, doctorId } = payload;
+    const res    = yield call(fetchCalendarByDateApi, date, doctorId);
+    const raw    = res.data?.data;
+    const events = Array.isArray(raw) ? raw : [];
+    yield put(fetchDayEventsSuccess(events));
+  } catch (e) {
+    yield put(fetchDayEventsFailure());
   }
 }
 
 export default function* calendarSaga() {
-  yield takeLatest(fetchRequest.type, fetchSaga);
+  yield takeLatest(fetchEventsRequest.type,    fetchEventsSaga);
+  yield takeLatest(fetchDayEventsRequest.type, fetchDayEventsSaga);
 }

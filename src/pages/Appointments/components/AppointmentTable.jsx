@@ -1,8 +1,9 @@
 import React from 'react';
 import { Table, Popconfirm, Tooltip } from 'antd';
 import { EyeOutlined, EditOutlined, StopOutlined } from '@ant-design/icons';
+import dayjs from 'dayjs';
+import utc from 'dayjs/plugin/utc';
 import StatusBadge from './StatusBadge';
-import { formatDate } from '../../../utils/dateUtils';
 import useAppointments from '../../../hooks/useAppointments';
 import {
   TableWrap,
@@ -12,6 +13,9 @@ import {
   NamePrimary,
   NameSub,
 } from './AppointmentTable.styled';
+
+dayjs.extend(utc);
+
 
 const TERMINAL_STATUSES = ['cancelled', 'completed'];
 
@@ -25,8 +29,7 @@ const calcDuration = (start, end) => {
 
 const formatApptTime = (appt) => {
   if (!appt.appointment_date || !appt.start_time) return '—';
-  const time = appt.start_time.slice(0, 5);
-  return `${formatDate(appt.appointment_date)} ${time}`;
+  return dayjs.utc(`${appt.appointment_date} ${appt.start_time}`).local().format('DD MMM YYYY HH:mm');
 };
 
 const capitalize = (s) => s ? s.charAt(0).toUpperCase() + s.slice(1).replace('_', ' ') : '—';
@@ -43,11 +46,33 @@ const AppointmentTable = ({
 }) => {
   const { cancelAppointment } = useAppointments();
 
-  const canEdit = (appt) =>
-    role !== 'patient' && !TERMINAL_STATUSES.includes(appt.status);
+  // const canEdit = (appt) =>
+  //   role !== 'patient' && !TERMINAL_STATUSES.includes(appt.status);
+const canEdit = (appt) => {
+  // Admin: view only — no edit
+  if (role === 'admin') return false;
+  // Patient: no edit
+  if (role === 'patient') return false;
+  // Terminal statuses: no edit for anyone
+  if (TERMINAL_STATUSES.includes(appt.status)) return false;
+  // Doctor: only their own
+  if (role === 'doctor') return true;
+  // Nurse, Receptionist: can edit
+  return ['nurse', 'receptionist'].includes(role);
+};
 
-  const canCancel = (appt) =>
-    !TERMINAL_STATUSES.includes(appt.status);
+  // const canCancel = (appt) =>
+  //   !TERMINAL_STATUSES.includes(appt.status);
+
+const canCancel = (appt) => {
+  if (TERMINAL_STATUSES.includes(appt.status)) return false;
+  // Admin: no cancel
+  if (role === 'admin') return false;
+  // Patient: can cancel their own
+  if (role === 'patient') return true;
+  // Doctor, nurse, receptionist: can cancel
+  return ['doctor', 'nurse', 'receptionist'].includes(role);
+};
 
   const columns = [
     {

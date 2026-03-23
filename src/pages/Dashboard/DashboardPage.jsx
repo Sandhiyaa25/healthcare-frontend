@@ -81,8 +81,14 @@ const ALL_CARDS = [
     variant:  'primary',
     trend:    0,
     roles:    ['patient'],
-    getValue: (data) => data?.todays_appointments ?? '—',
+    //getValue: (data) => data?.todays_appointments ?? '—',
+    getValue: (data) => {
+    // Show total count from recent_appointments array for patient
+    const recent = data?.recent_appointments;
+    if (Array.isArray(recent)) return recent.length;
+    return data?.todays_appointments ?? '—';
   },
+},
   {
     key:      'total_invoices',
     label:    'Total Invoices',

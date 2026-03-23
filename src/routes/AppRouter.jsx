@@ -9,12 +9,15 @@ import NotFoundPage from '../pages/Errors/NotFoundPage';
 import UnauthorizedPage from '../pages/Errors/UnauthorizedPage';
 import ErrorPage from '../pages/Errors/ErrorPage';
 
+
 // ─── Lazy imports ─────────────────────────────────────────────────────────────
 const DashboardPage = lazy(() => import('../pages/Dashboard/DashboardPage'));
 const SettingsPage = lazy(() => import('../pages/Settings/SettingsPage'));
 const UsersListPage = lazy(() => import('../pages/Users/UsersListPage'));
 const StaffListPage = lazy(() => import('../pages/Staff/StaffListPage'));
 const ProfilePage = lazy(() => import('../pages/Profile/ProfilePage'));
+const RecordsListPage = lazy(() => import('../pages/Records/RecordsListPage'));
+
 
 // ─── Patient module ───────────────────────────────────────────────────────────
 const PatientsListPage = lazy(() => import('../pages/Patients/PatientsListPage'));
@@ -24,9 +27,18 @@ const PatientDetailPage = lazy(() => import('../pages/Patients/PatientDetailPage
 const AppointmentsListPage = lazy(() => import('../pages/Appointments/AppointmentsListPage'));
 const AppointmentDetailPage = lazy(() => import('../pages/Appointments/AppointmentDetailPage'));
 
-// ─── Other modules ────────────────────────────────────────────────────────────
+// ─── Messages module ──────────────────────────────────────────────────────────
+const MessagesPage = lazy(() => import('../pages/Messages/MessagesPage'));
+
+// ─── Billing module ───────────────────────────────────────────────────────────
+const BillingListPage = lazy(() => import('../pages/Billing/BillingListPage'));
+const InvoiceDetailPage = lazy(() => import('../pages/Billing/InvoiceDetailPage'));
+
+// ─── Prescription module ───────────────────────────────────────────────────────────
 const PrescriptionsListPage = lazy(() => import('../pages/Prescriptions/PrescriptionsListPage'));
-const RecordsListPage = lazy(() => import('../pages/Records/RecordsListPage'));
+
+// ─── Calendar module ───────────────────────────────────────────────────────────
+
 const CalendarPage = lazy(() => import('../pages/Calendar/CalendarPage'));
 
 const Fallback = () => <Spinner size="lg" fullPage />;
@@ -56,8 +68,25 @@ const AppRouter = () => (
           }
         >
           <Route path="dashboard" element={<DashboardPage />} />
-          <Route path="users/*" element={<UsersListPage />} />
-          <Route path="staff/*" element={<StaffListPage />} />
+          {/* <Route path="users/*"        element={<UsersListPage />} /> */}
+          <Route
+            path="users/*"
+            element={
+              <RoleGuard allowedRoles={['admin']}>
+                <UsersListPage />
+              </RoleGuard>
+            }
+          />
+          {/* <Route path="staff/*"        element={<StaffListPage />} /> */}
+
+          <Route
+            path="staff/*"
+            element={
+              <RoleGuard allowedRoles={['admin']}>
+                <StaffListPage />
+              </RoleGuard>
+            }
+          />
           <Route path="settings/*" element={<SettingsPage />} />
           <Route path="profile" element={<ProfilePage />} />
 
@@ -84,11 +113,55 @@ const AppRouter = () => (
           <Route path="appointments/:id" element={<AppointmentDetailPage />} />
 
           {/* ── Coming Soon placeholders ────────────────────────────── */}
-          <Route path="prescriptions/*" element={<PrescriptionsListPage />} />
-          <Route path="billing/*" element={<ComingSoon title="Billing" />} />
-          <Route path="messages/*" element={<ComingSoon title="Messages" />} />
-          <Route path="calendar/*" element={<CalendarPage />} />
-          <Route path="records/*" element={<RecordsListPage />} />
+          {/* <Route path="prescriptions/*" element={<ComingSoon title="Prescriptions" />} /> */}
+          <Route
+            path="prescriptions/*"
+            element={
+              <RoleGuard allowedRoles={['admin', 'doctor', 'nurse', 'pharmacist', 'patient']}>
+                <PrescriptionsListPage />
+              </RoleGuard>
+            }
+          />
+          {/* <Route path="billing"          element={<BillingListPage />} /> */}
+          {/* <Route path="billing/:id"     element={<InvoiceDetailPage />} /> */}
+
+          <Route
+            path="billing"
+            element={
+              <RoleGuard allowedRoles={['admin', 'doctor', 'nurse', 'receptionist', 'patient']}>
+                <BillingListPage />
+              </RoleGuard>
+            }
+          />
+          <Route
+            path="billing/:id"
+            element={
+              <RoleGuard allowedRoles={['admin', 'doctor', 'nurse', 'receptionist', 'patient']}>
+                <InvoiceDetailPage />
+              </RoleGuard>
+            }
+          />
+
+          <Route path="messages/*" element={<MessagesPage />} />
+          {/* <Route path="calendar/*"      element={<ComingSoon title="Calendar" />} /> */}
+
+          <Route
+            path="calendar/*"
+            element={
+              <RoleGuard allowedRoles={['admin', 'doctor', 'nurse', 'receptionist', 'patient']}>
+                <CalendarPage />
+              </RoleGuard>
+            }
+          />
+
+          <Route
+            path="records/*"
+            element={
+              <RoleGuard allowedRoles={['admin', 'doctor', 'nurse', 'patient']}>
+                <RecordsListPage />
+              </RoleGuard>
+            }
+          />
           <Route path="my-health/*" element={<ComingSoon title="My Health" />} />
         </Route>
 

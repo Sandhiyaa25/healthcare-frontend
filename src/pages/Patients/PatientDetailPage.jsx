@@ -1,6 +1,9 @@
 import React, { useEffect, useState } from 'react';
+import axiosInstance from '../../api/axiosInstance';
+import { normalizeError } from '../../utils/errorNormalizer';
+import dayjs from 'dayjs';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Tabs, Descriptions, Tag, Skeleton, Table } from 'antd';
+import { Tabs, Descriptions, Tag, Skeleton } from 'antd';
 import { ArrowLeftOutlined, EditOutlined } from '@ant-design/icons';
 import usePatients from '../../hooks/usePatient';
 import useAuth from '../../hooks/useAuth';
@@ -8,9 +11,6 @@ import Badge from '../../components/ui/Badge/Badge';
 import Button from '../../components/ui/Button/Button';
 import PatientForm from './components/PatientForm';
 import { formatDate, formatDateTime } from '../../utils/dateUtils';
-import { getDummyAppointments } from '../../api/appointments.api';
-import { fetchPrescriptionsApi } from '../../api/prescriptions.api';
-import { fetchRecordsApi } from '../../api/records.api';
 import {
   PageWrap,
   DetailHeader,
@@ -35,72 +35,49 @@ const STATUS_VARIANT = {
   deceased: 'danger',
 };
 
-const APPT_STATUS = {
-  scheduled: 'processing', confirmed: 'success', completed: 'default',
-  cancelled: 'error', no_show: 'warning',
-};
-const RX_STATUS = { active: 'success', expired: 'danger', completed: 'default' };
-const REC_STATUS = { verified: 'success', pending: 'warning', incomplete: 'danger' };
 
 const PatientDetailPage = () => {
+  
   const { id } = useParams();
   const navigate = useNavigate();
   const { patient, loading, fetchPatient, clearPatient } = usePatients();
   const { role } = useAuth();
   const [showEdit, setShowEdit] = useState(false);
-  const [patientAppts, setPatientAppts] = useState([]);
-  const [patientRx, setPatientRx] = useState([]);
-  const [patientRecords, setPatientRecords] = useState([]);
+const [patientAppts,    setPatientAppts]    = useState([]);
+const [patientInvoices, setPatientInvoices] = useState([]);
+const [loadingAppts,    setLoadingAppts]    = useState(false);
+const [loadingBilling,  setLoadingBilling]  = useState(false);
+
 
   useEffect(() => {
     fetchPatient(Number(id));
     return () => clearPatient();
   }, [id, fetchPatient, clearPatient]);
 
-  // Load cross-module data when patient ID is known
-  useEffect(() => {
-    if (!id) return;
-    const pid = Number(id);
-
-    // Appointments — filter from dummy data
-    const allAppts = getDummyAppointments();
-    setPatientAppts(allAppts.filter((a) => a.patient_id === pid));
-
-    // Prescriptions — filter from dummy data
-    fetchPrescriptionsApi().then((res) => {
-      const all = res.data || [];
-      setPatientRx(all.filter((p) => p.patient_id === pid));
-    });
-
-    // Records — filter from dummy data
-    fetchRecordsApi().then((res) => {
-      const all = res.data || [];
-      setPatientRecords(all.filter((r) => r.patient_id === pid));
-    });
-  }, [id]);
-
-  const apptColumns = [
-    { title: 'Date', dataIndex: 'appointment_date', render: (d) => formatDate(d) },
-    { title: 'Time', dataIndex: 'start_time', render: (t) => t?.slice(0, 5) || '—' },
-    { title: 'Doctor', dataIndex: 'doctor_name' },
-    { title: 'Type', dataIndex: 'type', render: (t) => t ? t.charAt(0).toUpperCase() + t.slice(1).replace('_', ' ') : '—' },
-    { title: 'Status', dataIndex: 'status', render: (s) => <Tag color={APPT_STATUS[s]}>{s}</Tag> },
-  ];
-
-  const rxColumns = [
-    { title: 'Medication', dataIndex: 'medication_name' },
-    { title: 'Dosage', dataIndex: 'dosage' },
-    { title: 'Frequency', dataIndex: 'frequency' },
-    { title: 'Date', dataIndex: 'date_issued', render: (d) => formatDate(d) },
-    { title: 'Status', dataIndex: 'status', render: (s) => <Tag color={RX_STATUS[s]}>{s}</Tag> },
-  ];
-
-  const recColumns = [
-    { title: 'Diagnosis', dataIndex: 'diagnosis' },
-    { title: 'Doctor', dataIndex: 'doctor_name' },
-    { title: 'Date', dataIndex: 'date_recorded', render: (d) => formatDate(d) },
-    { title: 'Status', dataIndex: 'status', render: (s) => <Tag color={REC_STATUS[s]}>{s}</Tag> },
-  ];
+  // Load them when patient is loaded:
+useEffect(() => {
+  if (!patient?.id) return;
+  // Appointments
+  setLoadingAppts(true);
+  axiosInstance.get('/api/appointments', { params: { patient_id: patient.id, per_page: 20 } })
+    .then((r) => {
+      const raw = r.data?.data;
+      setPatientAppts(Array.isArray(raw) ? raw
+        : Array.isArray(raw?.appointments) ? raw.appointments : []);
+    })
+    .catch(() => setPatientAppts([]))
+    .finally(() => setLoadingAppts(false));
+  // Billing
+  setLoadingBilling(true);
+  axiosInstance.get('/api/billing', { params: { patient_id: patient.id, per_page: 20 } })
+    .then((r) => {
+      const raw = r.data?.data;
+      setPatientInvoices(Array.isArray(raw) ? raw
+        : Array.isArray(raw?.invoices) ? raw.invoices : []);
+    })
+    .catch(() => setPatientInvoices([]))
+    .finally(() => setLoadingBilling(false));
+}, [patient?.id]);
 
   const tabItems = [
     {
@@ -140,59 +117,97 @@ const PatientDetailPage = () => {
         </TabContent>
       ),
     },
-    {
-      key: 'appointments',
-      label: `Appointments (${patientAppts.length})`,
-      children: (
-        <TabContent>
-          {patientAppts.length > 0 ? (
-            <Table dataSource={patientAppts} columns={apptColumns} rowKey="id"
-              size="small" pagination={false} />
-          ) : (
-            <PlaceholderMsg>No appointments found for this patient.</PlaceholderMsg>
-          )}
-        </TabContent>
-      ),
-    },
-    {
-      key: 'prescriptions',
-      label: `Prescriptions (${patientRx.length})`,
-      children: (
-        <TabContent>
-          {patientRx.length > 0 ? (
-            <Table dataSource={patientRx} columns={rxColumns} rowKey="id"
-              size="small" pagination={false} />
-          ) : (
-            <PlaceholderMsg>No prescriptions found for this patient.</PlaceholderMsg>
-          )}
-        </TabContent>
-      ),
-    },
-    {
-      key: 'records',
-      label: `Records (${patientRecords.length})`,
-      children: (
-        <TabContent>
-          {patientRecords.length > 0 ? (
-            <Table dataSource={patientRecords} columns={recColumns} rowKey="id"
-              size="small" pagination={false} />
-          ) : (
-            <PlaceholderMsg>No medical records found for this patient.</PlaceholderMsg>
-          )}
-        </TabContent>
-      ),
-    },
-    {
-      key: 'billing',
-      label: 'Billing',
-      children: (
-        <TabContent>
-          <PlaceholderMsg>
-            Billing history will appear here once the Billing module is built.
-          </PlaceholderMsg>
-        </TabContent>
-      ),
-    },
+    // Appointments tab:
+{
+  key: 'appointments',
+  label: 'Appointments',
+  children: (
+    <TabContent>
+      {loadingAppts ? (
+        <PlaceholderMsg>Loading...</PlaceholderMsg>
+      ) : patientAppts.length === 0 ? (
+        <PlaceholderMsg>No appointments found for this patient.</PlaceholderMsg>
+      ) : (
+        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+          <thead>
+            <tr style={{ borderBottom: '1px solid' }}>
+              <th style={{ padding: '8px', textAlign: 'left', color: '#64748B', fontWeight: 600 }}>Date</th>
+              <th style={{ padding: '8px', textAlign: 'left', color: '#64748B', fontWeight: 600 }}>Doctor</th>
+              <th style={{ padding: '8px', textAlign: 'left', color: '#64748B', fontWeight: 600 }}>Type</th>
+              <th style={{ padding: '8px', textAlign: 'left', color: '#64748B', fontWeight: 600 }}>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            {patientAppts.map((a) => (
+              <tr key={a.id} style={{ borderBottom: '1px solid rgba(0,0,0,0.06)' }}>
+                <td style={{ padding: '10px 8px' }}>
+                  {a.appointment_date ? dayjs(a.appointment_date).format('DD MMM YYYY') : '—'}
+                  {a.start_time && <span style={{ color: '#94A3B8', marginLeft: 6 }}>{a.start_time.slice(0,5)}</span>}
+                </td>
+                <td style={{ padding: '10px 8px' }}>{a.doctor_name || `Doctor #${a.doctor_id}`}</td>
+                <td style={{ padding: '10px 8px', textTransform: 'capitalize' }}>{a.type || '—'}</td>
+                <td style={{ padding: '10px 8px' }}>
+                  <Badge variant={
+                    a.status === 'confirmed' ? 'primary'
+                    : a.status === 'completed' ? 'success'
+                    : a.status === 'cancelled' ? 'danger'
+                    : 'warning'
+                  }>{a.status}</Badge>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+    </TabContent>
+  ),
+},
+
+// Billing tab:
+{
+  key: 'billing',
+  label: 'Billing',
+  children: (
+    <TabContent>
+      {loadingBilling ? (
+        <PlaceholderMsg>Loading...</PlaceholderMsg>
+      ) : patientInvoices.length === 0 ? (
+        <PlaceholderMsg>No billing records found for this patient.</PlaceholderMsg>
+      ) : (
+        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+          <thead>
+            <tr style={{ borderBottom: '1px solid' }}>
+              <th style={{ padding: '8px', textAlign: 'left', color: '#64748B', fontWeight: 600 }}>Invoice #</th>
+              <th style={{ padding: '8px', textAlign: 'left', color: '#64748B', fontWeight: 600 }}>Amount</th>
+              <th style={{ padding: '8px', textAlign: 'left', color: '#64748B', fontWeight: 600 }}>Status</th>
+              <th style={{ padding: '8px', textAlign: 'left', color: '#64748B', fontWeight: 600 }}>Date</th>
+            </tr>
+          </thead>
+          <tbody>
+            {patientInvoices.map((inv) => (
+              <tr key={inv.id} style={{ borderBottom: '1px solid rgba(0,0,0,0.06)' }}>
+                <td style={{ padding: '10px 8px' }}>#{inv.id}</td>
+                <td style={{ padding: '10px 8px' }}>
+                  ₹{parseFloat(inv.total_amount || inv.amount || 0).toLocaleString('en-IN')}
+                </td>
+                <td style={{ padding: '10px 8px' }}>
+                  <Badge variant={
+                    inv.status === 'paid' ? 'success'
+                    : inv.status === 'partial' ? 'info'
+                    : 'warning'
+                  }>{inv.status}</Badge>
+                </td>
+                <td style={{ padding: '10px 8px' }}>
+                  {inv.created_at ? dayjs(inv.created_at).format('DD MMM YYYY') : '—'}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+    </TabContent>
+  ),
+},
   ];
 
   return (

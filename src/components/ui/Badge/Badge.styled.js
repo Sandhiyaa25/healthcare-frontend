@@ -13,7 +13,7 @@ const variantMap = (theme) => ({
   nurse:        { bg: '#D1FAE5', color: '#065F46' },
   receptionist: { bg: '#FEF3C7', color: '#92400E' },
   pharmacist:   { bg: '#FCE7F3', color: '#9D174D' },
-  patient:      { bg: '#E0F2FE', color: '#0369A1' },
+  patient:      { bg: '#E0F2FE', color: '#a17c03' },
 });
 
 export const BadgeEl = styled.span`

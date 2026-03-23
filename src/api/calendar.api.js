@@ -1,32 +1,12 @@
-import { getDummyAppointments } from './appointments.api';
+import axiosInstance from './axiosInstance';
 
-// ── Helper ──────────────────────────────────────────────────────────────────
-const delay = (ms) => new Promise((r) => setTimeout(r, ms));
+export const fetchCalendarEventsApi = (params) =>
+  axiosInstance.get('/api/calendar', { params });
 
-const TYPE_MAP = {
-    consultation: 'appointment',
-    follow_up: 'follow-up',
-    emergency: 'surgery',
-    routine: 'appointment',
-};
+export const fetchCalendarByDateApi = (date, doctorId) =>
+  axiosInstance.get(`/api/calendar/${date}`, {
+    params: doctorId ? { doctor_id: doctorId } : {},
+  });
 
-// ── Auto-generate calendar events from appointment data ─────────────────────
-export const fetchCalendarEventsApi = async () => {
-    await delay(400);
-    const appointments = getDummyAppointments();
-
-    const events = appointments.map((a) => ({
-        id: `cal-${a.id}`,
-        date: a.appointment_date,
-        title: `${capitalize(a.type)} - ${a.patient_name}`,
-        type: TYPE_MAP[a.type] || 'appointment',
-        time: a.start_time?.slice(0, 5),
-        appointmentId: a.id,
-    }));
-
-    return { data: events };
-};
-
-function capitalize(s) {
-    return s ? s.charAt(0).toUpperCase() + s.slice(1).replace('_', '-') : '';
-}
+export const fetchCalendarEventDetailApi = (id) =>
+  axiosInstance.get(`/api/calendar/event/${id}`);

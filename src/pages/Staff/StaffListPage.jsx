@@ -4,6 +4,7 @@ import { fetchRolesApi, fetchUsersApi } from '../../api/staff.api';
 import { normalizeError } from '../../utils/errorNormalizer';
 import Badge   from '../../components/ui/Badge/Badge';
 import Spinner from '../../components/ui/Spinner/Spinner';
+import { Table as AntTable } from 'antd';
 import {
   UserAddOutlined, EditOutlined, DeleteOutlined,
   SearchOutlined, ReloadOutlined, MedicineBoxOutlined,
@@ -129,6 +130,59 @@ const getStaffName = (s) => {
   if (s.username) return s.username;
   return `Staff #${s.id}`;
 };
+
+const staffColumns = [
+  {
+    title: 'Staff Member',
+    key: 'staff',
+    render: (_, s) => (
+      <StaffCell>
+        <Avatar>{getStaffName(s)[0]?.toUpperCase() || 'S'}</Avatar>
+        <div>
+          <SName>{getStaffName(s)}</SName>
+          {s.username && <SDept>@{s.username}</SDept>}
+        </div>
+      </StaffCell>
+    ),
+  },
+  {
+    title: 'Role',
+    key: 'role',
+    render: (_, s) => (
+      <Badge variant={s.role_slug || 'primary'}>
+        {s.role_name || `Role #${s.role_id}`}
+      </Badge>
+    ),
+  },
+  { title: 'Department',     dataIndex: 'department',    key: 'dept',    render: (v) => v || '—' },
+  { title: 'Specialization', dataIndex: 'specialization', key: 'spec',   render: (v) => v || '—' },
+  {
+    title: 'License',
+    dataIndex: 'license_number',
+    key: 'license',
+    render: (v) => v
+      ? <span style={{ fontFamily: 'monospace', fontSize: 12 }}>{v}</span>
+      : '—',
+  },
+  {
+    title: 'Status',
+    key: 'status',
+    render: (_, s) => (
+      <Badge variant={STATUS_VARIANT[s.status] || 'default'}>{s.status}</Badge>
+    ),
+  },
+  {
+    title: 'Actions',
+    key: 'actions',
+    align: 'right',
+    render: (_, s) => (
+      <ActCell>
+        <ABtn onClick={() => openEdit(s)}><EditOutlined /> Edit</ABtn>
+        <ABtn $danger onClick={() => handleDelete(s.id)}><DeleteOutlined /></ABtn>
+      </ActCell>
+    ),
+  },
+];
   return (
     <Wrap>
       <TopBar>
@@ -144,47 +198,21 @@ const getStaffName = (s) => {
       </TopBar>
 
       {error && <ErrMsg>{error}</ErrMsg>}
+<Card>
+  <AntTable
+    dataSource={filtered}
+    columns={staffColumns}
+    rowKey="id"
+    loading={loading}
+    scroll={{ x: 800 }}
+    pagination={{
+      pageSize: 10,
+      showSizeChanger: false,
+      showTotal: (total, range) => `${range[0]}–${range[1]} of ${total} staff`,
+    }}
+  />
+</Card>
 
-      <Card>
-        {loading ? (
-          <div style={{padding:60,display:'flex',justifyContent:'center'}}><Spinner size="md"/></div>
-        ) : (
-          <Table>
-            <Thead>
-              <Tr><Th>Staff Member</Th><Th>Role</Th><Th>Department</Th><Th>Specialization</Th><Th>License</Th><Th>Status</Th><Th>Actions</Th></Tr>
-            </Thead>
-            <Tbody>
-              {filtered.length === 0 ? (
-                <Tr><Td colSpan={7}><EmptyState><MedicineBoxOutlined style={{fontSize:36,display:'block',margin:'0 auto 8px'}}/> No staff members found.</EmptyState></Td></Tr>
-              ) : filtered.map((s, idx) => (
-                <Tr key={s.id}>
-                  {/* <Td style={{color:'#94A3B8'}}>{idx+1}</Td> */}
-                  <Td>
-                    <StaffCell>
-                      <Avatar>{getStaffName(s)[0]?.toUpperCase()||'S'}</Avatar>
-                      <div>
-                        <SName>{getStaffName(s)}</SName>
-                        {(s.user?.username||s.username) && <SDept>@{s.user?.username||s.username}</SDept>}
-                      </div>
-                    </StaffCell>
-                  </Td>
-                  <Td><Badge variant="primary">{s.role?.name||s.role_name||`Role #${s.role_id}`}</Badge></Td>
-                  <Td>{s.department||'—'}</Td>
-                  <Td>{s.specialization||'—'}</Td>
-                  <Td style={{fontFamily:'monospace',fontSize:12}}>{s.license_number||'—'}</Td>
-                  <Td><Badge variant={STATUS_VARIANT[s.status]||'default'}>{s.status}</Badge></Td>
-                  <Td>
-                    <ActCell>
-                      <ABtn onClick={()=>openEdit(s)}><EditOutlined/> Edit</ABtn>
-                      <ABtn danger="true" onClick={()=>handleDelete(s.id)}><DeleteOutlined/></ABtn>
-                    </ActCell>
-                  </Td>
-                </Tr>
-              ))}
-            </Tbody>
-          </Table>
-        )}
-      </Card>
 
       {showModal && (
         <Overlay onClick={(e)=>e.target===e.currentTarget&&setShowModal(false)}>

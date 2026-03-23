@@ -1,137 +1,257 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import usePrescriptions from '../../hooks/usePrescriptions';
-import { normalizeError } from '../../utils/errorNormalizer';
-import Badge from '../../components/ui/Badge/Badge';
-import Spinner from '../../components/ui/Spinner/Spinner';
-import PrescriptionForm from './components/PrescriptionForm';
+import { Table, Tooltip, Modal, Alert } from 'antd';
 import {
-    MedicineBoxOutlined, SearchOutlined, ReloadOutlined
+  PlusOutlined, ReloadOutlined, EyeOutlined,
+  CheckCircleOutlined, CloseCircleOutlined, ExperimentOutlined,
 } from '@ant-design/icons';
+import dayjs from 'dayjs';
+import usePrescriptions from '../../hooks/usePrescriptions';
+import useAuth          from '../../hooks/useAuth';
+import Badge            from '../../components/ui/Badge/Badge';
+import Spinner          from '../../components/ui/Spinner/Spinner';
+import PrescriptionForm        from './components/PrescriptionForm';
+import PrescriptionDetailModal from './components/PrescriptionDetailModal';
+import VerifyModal             from './components/VerifyModal';
 import {
-    Wrap, TopBar, Title, Controls,
-    SearchBox, SearchInp, IconBtn, AddBtn,
-    Card, TableWrap, Table, Thead, Tbody, Tr, Th, Td,
-    EmptyState, ErrMsg
+  PageWrap, TopBar, PageTitle, Controls,
+  FilterSelect, IconBtn, AddBtn, TableWrap,
+  CellPrimary, CellSub, ActionGroup, ActionBtn,
+  ErrorMsg, CenteredSpin,
 } from './PrescriptionsListPage.styled';
 
 const STATUS_VARIANT = {
-    active: 'success', expired: 'danger', pending: 'warning', completed: 'default',
-};
-
-const formatDate = (dateStr) => {
-    if (!dateStr) return '—';
-    return new Date(dateStr).toLocaleDateString('en-IN', {
-        day: '2-digit', month: 'short', year: 'numeric',
-    });
+  pending:   'warning',
+  dispensed: 'success',
+  rejected:  'danger',
 };
 
 const PrescriptionsListPage = () => {
-    const { prescriptions, loading, saving, error, fetchPrescriptions, createPrescription } = usePrescriptions();
-    const [search, setSearch] = useState('');
-    const [localError, setLocalError] = useState(null);
-    const [showForm, setShowForm] = useState(false);
+  const { role } = useAuth();
+  const {
+    list, loading, error, saving, saveError, pagination,
+    fetchList, createPrescription, verifyPrescription,
+    clearSaveErr, clearFetchErr,
+  } = usePrescriptions();
 
-    const loadData = useCallback(() => {
-        setLocalError(null);
-        try {
-            fetchPrescriptions();
-        } catch (e) {
-            setLocalError(normalizeError(e).message);
-        }
-    }, [fetchPrescriptions]);
+  const [statusFilter, setStatusFilter] = useState('');
+  const [showForm,     setShowForm]     = useState(false);
+  const [viewItem,     setViewItem]     = useState(null);
+  const [verifyItem,   setVerifyItem]   = useState(null);
+  const [page,         setPage]         = useState(1);
 
-    useEffect(() => {
-        loadData();
-    }, [loadData]);
+  const load = useCallback((p = page, status = statusFilter) => {
+    fetchList({ page: p, perPage: 10, status: status || undefined });
+  }, [fetchList, page, statusFilter]);
 
-    const filtered = Array.isArray(prescriptions) ? prescriptions.filter((p) =>
-        !search ||
-        (p.medication_name || '').toLowerCase().includes(search.toLowerCase()) ||
-        (p.patient_name || '').toLowerCase().includes(search.toLowerCase())
-    ) : [];
+  useEffect(() => { load(1); }, []);
 
-    const displayError = error || localError;
+  const handleStatusFilter = (e) => {
+    const val = e.target.value;
+    setStatusFilter(val);
+    setPage(1);
+    fetchList({ page: 1, perPage: 10, status: val || undefined });
+  };
 
-    const handleFormSuccess = (newPrescription) => {
-        createPrescription(newPrescription);
-        setShowForm(false);
-    };
+  const handlePageChange = (p) => {
+    setPage(p);
+    fetchList({ page: p, perPage: 10, status: statusFilter || undefined });
+  };
 
-    return (
-        <Wrap>
-            <TopBar>
-                <Title>Prescriptions Management</Title>
-                <Controls>
-                    <SearchBox>
-                        <SearchOutlined style={{ color: '#94A3B8' }} />
-                        <SearchInp
-                            placeholder="Search medication or patient..."
-                            value={search}
-                            onChange={(e) => setSearch(e.target.value)}
-                        />
-                    </SearchBox>
-                    <IconBtn onClick={loadData} title="Refresh"><ReloadOutlined /></IconBtn>
-                    <AddBtn onClick={() => setShowForm(true)}><MedicineBoxOutlined /> Add Prescription</AddBtn>
-                </Controls>
-            </TopBar>
+  const handleCreate = (data) => {
+    createPrescription(data, () => {
+      setShowForm(false);
+      load(1);
+    });
+  };
 
-            {displayError && <ErrMsg>{displayError}</ErrMsg>}
+  const handleVerify = (status) => {
+    if (!verifyItem) return;
+    verifyPrescription(verifyItem.id, status, () => {
+      setVerifyItem(null);
+      load(page);
+    });
+  };
 
-            <div style={{ display: 'flex', gap: '20px', alignItems: 'flex-start' }}>
-                <TableWrap>
-                    <Card>
-                        {loading ? (
-                            <div style={{ padding: 60, display: 'flex', justifyContent: 'center' }}>
-                                <Spinner size="md" />
-                            </div>
-                        ) : (
-                            <Table>
-                                <Thead>
-                                    <Tr>
-                                        <Th>Patient Name</Th>
-                                        <Th>Medication</Th>
-                                        <Th>Dosage</Th>
-                                        <Th>Frequency</Th>
-                                        <Th>Date Issued</Th>
-                                        <Th>Status</Th>
-                                    </Tr>
-                                </Thead>
-                                <Tbody>
-                                    {filtered.length === 0 ? (
-                                        <Tr>
-                                            <Td colSpan={6}>
-                                                <EmptyState>No prescriptions found.</EmptyState>
-                                            </Td>
-                                        </Tr>
-                                    ) : filtered.map((p) => (
-                                        <Tr key={p.id}>
-                                            <Td style={{ fontWeight: 500 }}>{p.patient_name || '—'}</Td>
-                                            <Td style={{ color: '#0F172A', fontWeight: 600 }}>{p.medication_name}</Td>
-                                            <Td>{p.dosage || '—'}</Td>
-                                            <Td>{p.frequency || '—'}</Td>
-                                            <Td>{formatDate(p.date_issued || p.created_at)}</Td>
-                                            <Td>
-                                                <Badge variant={STATUS_VARIANT[p.status] || 'default'}>
-                                                    {p.status || 'Active'}
-                                                </Badge>
-                                            </Td>
-                                        </Tr>
-                                    ))}
-                                </Tbody>
-                            </Table>
-                        )}
-                    </Card>
-                </TableWrap>
-            </div>
+  const canCreate = role === 'doctor';
+  const canVerify = role === 'pharmacist';
 
-            <PrescriptionForm
-                open={showForm}
-                onClose={() => setShowForm(false)}
-                onSuccess={handleFormSuccess}
-                saving={saving}
-            />
-        </Wrap>
-    );
+  const columns = [
+    {
+      title: 'Patient',
+      key: 'patient',
+      render: (_, row) => (
+        <>
+          <CellPrimary>{row.patient_name || `Patient #${row.patient_id}`}</CellPrimary>
+        </>
+      ),
+    },
+    {
+      title: 'Doctor',
+      key: 'doctor',
+      render: (_, row) => (
+        <CellPrimary>{row.doctor_name || `Doctor #${row.doctor_id}`}</CellPrimary>
+      ),
+    },
+    {
+      title: 'Appointment',
+      key: 'appointment',
+      render: (_, row) => (
+        <CellSub>#{row.appointment_id || '—'}</CellSub>
+      ),
+    },
+    {
+      title: 'Date',
+      key: 'date',
+      render: (_, row) => (
+        <CellSub>
+          {row.created_at ? dayjs(row.created_at).format('DD MMM YYYY') : '—'}
+        </CellSub>
+      ),
+    },
+    {
+      title: 'Status',
+      key: 'status',
+      render: (_, row) => (
+        <Badge variant={STATUS_VARIANT[row.status] || 'default'}>
+          {row.status}
+        </Badge>
+      ),
+    },
+    {
+      title: 'Verified By',
+      key: 'verified_by',
+      render: (_, row) => (
+        <CellSub>
+          {row.verified_by
+            ? `Pharmacist #${row.verified_by}`
+            : row.status === 'pending' ? '—' : '—'}
+        </CellSub>
+      ),
+    },
+    {
+      title: 'Actions',
+      key: 'actions',
+      align: 'right',
+      render: (_, row) => (
+        <ActionGroup>
+          <Tooltip title="View Details">
+            <ActionBtn onClick={() => setViewItem(row)}>
+              <EyeOutlined />
+            </ActionBtn>
+          </Tooltip>
+          {canVerify && row.status === 'pending' && (
+            <>
+              <Tooltip title="Mark as Dispensed">
+                <ActionBtn
+                  $variant="success"
+                  onClick={() => setVerifyItem(row)}
+                >
+                  <CheckCircleOutlined />
+                </ActionBtn>
+              </Tooltip>
+            </>
+          )}
+        </ActionGroup>
+      ),
+    },
+  ];
+
+  // Role-based column filtering
+  const visibleColumns = columns.filter((col) => {
+    // Patient sees their own — hide doctor column optional
+    // Nurse/Admin: all columns
+    return true;
+  });
+
+  return (
+    <PageWrap>
+      <TopBar>
+        <PageTitle>
+          <ExperimentOutlined style={{ marginRight: 10, color: 'inherit' }} />
+          Prescriptions
+        </PageTitle>
+        <Controls>
+          <FilterSelect value={statusFilter} onChange={handleStatusFilter}>
+            <option value="">All Status</option>
+            <option value="pending">Pending</option>
+            <option value="dispensed">Dispensed</option>
+            <option value="rejected">Rejected</option>
+          </FilterSelect>
+          <IconBtn onClick={() => load(page)} title="Refresh">
+            <ReloadOutlined />
+          </IconBtn>
+          {canCreate && (
+            <AddBtn onClick={() => setShowForm(true)}>
+              <PlusOutlined /> New Prescription
+            </AddBtn>
+          )}
+        </Controls>
+      </TopBar>
+
+      {error && (
+        <ErrorMsg>
+          <CloseCircleOutlined />
+          {error}
+        </ErrorMsg>
+      )}
+
+      <TableWrap>
+        {loading && list.length === 0 ? (
+          <CenteredSpin><Spinner size="md" /></CenteredSpin>
+        ) : (
+          <Table
+            dataSource={list}
+            columns={visibleColumns}
+            rowKey="id"
+            loading={loading}
+            pagination={{
+              current:   page,
+              pageSize:  pagination.perPage || 10,
+              total:     pagination.total   || 0,
+              onChange:  handlePageChange,
+              showSizeChanger: false,
+              showTotal: (total, range) =>
+                `${range[0]}–${range[1]} of ${total} prescriptions`,
+            }}
+          />
+        )}
+      </TableWrap>
+
+      {/* Create form — doctors only */}
+      {showForm && (
+        <PrescriptionForm
+          open={showForm}
+          onClose={() => { setShowForm(false); clearSaveErr(); }}
+          onSubmit={handleCreate}
+          saving={saving}
+          saveError={saveError}
+          onClearError={clearSaveErr}
+        />
+      )}
+
+      {/* Detail view modal */}
+      {viewItem && (
+        <PrescriptionDetailModal
+          item={viewItem}
+          onClose={() => setViewItem(null)}
+          canVerify={canVerify && viewItem.status === 'pending'}
+          onVerify={() => { setVerifyItem(viewItem); setViewItem(null); }}
+        />
+      )}
+
+      {/* Verify modal — pharmacist */}
+      {verifyItem && (
+        <VerifyModal
+          item={verifyItem}
+          open={!!verifyItem}
+          saving={saving}
+          saveError={saveError}
+          onClose={() => { setVerifyItem(null); clearSaveErr(); }}
+          onVerify={handleVerify}
+        />
+      )}
+    </PageWrap>
+  );
 };
 
 export default PrescriptionsListPage;

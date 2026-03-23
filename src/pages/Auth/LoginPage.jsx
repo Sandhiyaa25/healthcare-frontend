@@ -23,7 +23,16 @@ const FEATURES = [
 
 const LoginPage = () => {
   const isAuthenticated = useSelector((s) => s.auth.isAuthenticated);
-  if (isAuthenticated) return <Navigate to="/dashboard" replace />;
+  const user            = useSelector((s) => s.auth.user);
+
+  // ─── Redirect authenticated users based on role ──────────────────────────
+  if (isAuthenticated) {
+    const role = user?.role || user?.role_slug;
+    if (role === 'patient') {
+      return <Navigate to="/my-health" replace />;
+    }
+    return <Navigate to="/dashboard" replace />;
+  }
 
   return (
     <PageWrap>

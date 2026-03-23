@@ -93,8 +93,12 @@ const AppointmentsListPage = () => {
           <ReloadButton onClick={handleReload}>
             <ReloadOutlined />
           </ReloadButton>
-          {role !== 'patient' && (
-            <AddButton onClick={handleCreate}>
+          {/* {role !== 'patient' && (
+            <AddButton onClick={handleCreate}> */}
+            
+           {!['admin', 'pharmacist'].includes(role) && (
+  <AddButton onClick={() => setShowForm(true)}>
+
               <PlusOutlined /> New Appointment
             </AddButton>
           )}
