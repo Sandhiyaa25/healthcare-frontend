@@ -9,6 +9,12 @@ import NotFoundPage from '../pages/Errors/NotFoundPage';
 import UnauthorizedPage from '../pages/Errors/UnauthorizedPage';
 import ErrorPage from '../pages/Errors/ErrorPage';
 
+// ─── Lazy imports ─────────────────────────────────────────────────────────────
+const DashboardPage     = lazy(() => import('../pages/Dashboard/DashboardPage'));
+const SettingsPage      = lazy(() => import('../pages/Settings/SettingsPage'));
+const UsersListPage     = lazy(() => import('../pages/Users/UsersListPage'));
+const StaffListPage     = lazy(() => import('../pages/Staff/StaffListPage'));
+const ProfilePage       = lazy(() => import('../pages/Profile/ProfilePage'));
 
 // ─── Lazy imports ─────────────────────────────────────────────────────────────
 const DashboardPage = lazy(() => import('../pages/Dashboard/DashboardPage'));

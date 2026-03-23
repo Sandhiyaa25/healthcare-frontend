@@ -156,6 +156,7 @@ const STATUS_VARIANT = {
   active: 'success', inactive: 'warning', suspended: 'danger', deleted: 'default',
 };
 
+// ── FIX 1: Added phone to EMPTY_FORM ────────────────────────────────────────
 const EMPTY_FORM = {
   username: '', email: '', password: '',
   first_name: '', last_name: '', phone: '',
@@ -225,6 +226,7 @@ const UsersListPage = () => {
     setShowModal(true);
   };
 
+  // ── FIX 2: Added phone to openEdit population ────────────────────────────
   const openEdit = (u) => {
     setEditUser(u);
     setForm({
@@ -445,6 +447,7 @@ const UsersListPage = () => {
                   <DetailRowIcon><PhoneOutlined /></DetailRowIcon>
                   <DetailRowContent>
                     <DetailRowLabel>Phone</DetailRowLabel>
+                    {/* ── FIX 4: Now shows real phone value ── */}
                     <DetailRowValue>{viewUser.phone || '—'}</DetailRowValue>
                   </DetailRowContent>
                 </DetailRow>
@@ -504,6 +507,7 @@ const UsersListPage = () => {
               <ErrMsg style={{ marginBottom: 14 }}>{formErrors._global}</ErrMsg>
             )}
 
+            {/* Row 1: First Name + Last Name */}
             <FieldGrid>
               <Field>
                 <Label>First Name</Label>
@@ -542,6 +546,7 @@ const UsersListPage = () => {
 
             <div style={{ height: 14 }} />
 
+            {/* Email */}
             <Field>
               <Label>Email</Label>
               <Input
@@ -575,6 +580,7 @@ const UsersListPage = () => {
               </Field>
             )}
 
+            {/* Row 3: Role + Status */}
             <FieldGrid style={{ marginTop: 14 }}>
               <Field>
                 <Label>Role *</Label>
