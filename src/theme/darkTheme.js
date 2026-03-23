@@ -11,6 +11,7 @@ const darkTheme = {
     bgBase:        '#0D1117',
     bgCard:        '#161B22',
     bgSidebar:     '#010409',
+     bgInput:       '#21262D', //new bg
     bgSidebarHover:'#161B22',
     textPrimary:   '#E6EDF3',
     textSecondary: '#8B949E',

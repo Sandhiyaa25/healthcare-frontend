@@ -4,45 +4,116 @@ import axiosInstance from '../../api/axiosInstance';
 import { normalizeError } from '../../utils/errorNormalizer';
 import useAuth from '../../hooks/useAuth';
 import { idbSet, IDB_KEYS } from '../../utils/indexedDB';
-import { useDispatch } from 'react-redux';
-import { loginSuccess } from '../../store/auth/authSlice';
+import { useDispatch, useSelector } from 'react-redux';
+import { hydrateUser } from '../../store/auth/authSlice';
 import {
-  UserOutlined, LockOutlined, SaveOutlined,
-  CameraOutlined, CheckCircleOutlined,
+  UserOutlined, LockOutlined, SaveOutlined, CheckCircleOutlined,
 } from '@ant-design/icons';
 
-const Wrap    = styled.div`max-width: 680px; display: flex; flex-direction: column; gap: 24px;`;
-const Card    = styled.div`background: ${({ theme }) => theme.colors.bgCard}; border: 1px solid ${({ theme }) => theme.colors.border}; border-radius: ${({ theme }) => theme.radii.md}; padding: 24px;`;
-const CardTitle = styled.h3`font-size: 15px; font-weight: 600; color: ${({ theme }) => theme.colors.textPrimary}; margin-bottom: 20px; display: flex; align-items: center; gap: 8px; border-bottom: 1px solid ${({ theme }) => theme.colors.border}; padding-bottom: 14px;`;
-const AvatarSection = styled.div`display: flex; align-items: center; gap: 20px; margin-bottom: 24px;`;
-const AvatarBig = styled.div`
+// ─── Styled Components ────────────────────────────────────────────────────────
+const Wrap       = styled.div`max-width: 680px; display: flex; flex-direction: column; gap: 24px;`;
+const Card       = styled.div`
+  background:    ${({ theme }) => theme.colors.bgCard};
+  border:        1px solid ${({ theme }) => theme.colors.border};
+  border-radius: ${({ theme }) => theme.radii.md};
+  padding:       24px;
+`;
+const CardTitle  = styled.h3`
+  font-size: 15px; font-weight: 600;
+  color: ${({ theme }) => theme.colors.textPrimary};
+  margin-bottom: 20px;
+  display: flex; align-items: center; gap: 8px;
+  border-bottom: 1px solid ${({ theme }) => theme.colors.border};
+  padding-bottom: 14px;
+`;
+const AvatarSection = styled.div`
+  display: flex; align-items: center; gap: 20px; margin-bottom: 24px;
+`;
+const AvatarBig  = styled.div`
   width: 72px; height: 72px; border-radius: 50%;
   background: ${({ theme }) => theme.colors.primary};
   color: white; font-size: 28px; font-weight: 700;
   display: flex; align-items: center; justify-content: center;
-  text-transform: uppercase; position: relative; flex-shrink: 0;
+  text-transform: uppercase; flex-shrink: 0;
 `;
-const AvatarHint = styled.div``;
-const AvatarName = styled.p`font-size: 16px; font-weight: 600; color: ${({ theme }) => theme.colors.textPrimary};`;
-const AvatarRole = styled.p`font-size: 12px; color: ${({ theme }) => theme.colors.textMuted}; text-transform: capitalize; margin-top: 2px;`;
-const Grid  = styled.div`display: grid; grid-template-columns: 1fr 1fr; gap: 16px; @media(max-width:500px){grid-template-columns:1fr}`;
-const Field = styled.div`display: flex; flex-direction: column; gap: 5px;`;
-const Label = styled.label`font-size: 12px; font-weight: 500; color: ${({ theme }) => theme.colors.textPrimary};`;
-const Input = styled.input`padding: 9px 12px; border: 1.5px solid ${({ theme }) => theme.colors.border}; border-radius: ${({ theme }) => theme.radii.sm}; font-size: 13px; background: ${({ theme }) => theme.colors.bgCard}; color: ${({ theme }) => theme.colors.textPrimary}; outline: none; width: 100%; &:focus { border-color: ${({ theme }) => theme.colors.primary}; } &:disabled { opacity: 0.6; cursor: not-allowed; }`;
-const Textarea = styled.textarea`padding: 9px 12px; border: 1.5px solid ${({ theme }) => theme.colors.border}; border-radius: ${({ theme }) => theme.radii.sm}; font-size: 13px; background: ${({ theme }) => theme.colors.bgCard}; color: ${({ theme }) => theme.colors.textPrimary}; outline: none; width: 100%; resize: vertical; min-height: 80px; font-family: inherit; &:focus { border-color: ${({ theme }) => theme.colors.primary}; }`;
-const SaveBtn = styled.button`display: flex; align-items: center; gap: 6px; padding: 9px 20px; background: ${({ theme }) => theme.colors.primary}; color: white; border: none; border-radius: ${({ theme }) => theme.radii.sm}; font-size: 13px; font-weight: 500; cursor: pointer; margin-top: 20px; &:disabled { opacity: 0.6; cursor: not-allowed; } &:hover:not(:disabled) { background: ${({ theme }) => theme.colors.primaryDark}; }`;
-const SuccessMsg = styled.div`display: flex; align-items: center; gap: 8px; padding: 10px 14px; background: #DCFCE7; border: 1px solid #86EFAC; border-radius: ${({ theme }) => theme.radii.sm}; color: ${({ theme }) => theme.colors.success}; font-size: 13px; margin-top: 12px;`;
-const ErrMsg = styled.div`padding: 10px 14px; background: #FEF2F2; border: 1px solid #FECACA; border-radius: ${({ theme }) => theme.radii.sm}; color: ${({ theme }) => theme.colors.danger}; font-size: 13px; margin-top: 12px;`;
+const AvatarInfo = styled.div``;
+const AvatarName = styled.p`
+  font-size: 16px; font-weight: 600;
+  color: ${({ theme }) => theme.colors.textPrimary};
+`;
+const AvatarRole = styled.p`
+  font-size: 12px; color: ${({ theme }) => theme.colors.textMuted};
+  text-transform: capitalize; margin-top: 2px;
+`;
+const Grid       = styled.div`
+  display: grid; grid-template-columns: 1fr 1fr; gap: 16px;
+  @media(max-width: 500px) { grid-template-columns: 1fr; }
+`;
+const Field      = styled.div`display: flex; flex-direction: column; gap: 5px;`;
+const Label      = styled.label`
+  font-size: 12px; font-weight: 500;
+  color: ${({ theme }) => theme.colors.textPrimary};
+`;
+const Input      = styled.input`
+  padding: 9px 12px;
+  border: 1.5px solid ${({ theme }) => theme.colors.border};
+  border-radius: ${({ theme }) => theme.radii.sm};
+  font-size: 13px;
+  background: ${({ theme }) => theme.colors.bgCard};
+  color: ${({ theme }) => theme.colors.textPrimary};
+  outline: none; width: 100%;
+  &:focus    { border-color: ${({ theme }) => theme.colors.primary}; }
+  &:disabled { opacity: 0.6; cursor: not-allowed; }
+`;
+const Textarea   = styled.textarea`
+  padding: 9px 12px;
+  border: 1.5px solid ${({ theme }) => theme.colors.border};
+  border-radius: ${({ theme }) => theme.radii.sm};
+  font-size: 13px;
+  background: ${({ theme }) => theme.colors.bgCard};
+  color: ${({ theme }) => theme.colors.textPrimary};
+  outline: none; width: 100%; resize: vertical; min-height: 80px;
+  font-family: inherit;
+  &:focus { border-color: ${({ theme }) => theme.colors.primary}; }
+`;
+const SaveBtn    = styled.button`
+  display: flex; align-items: center; gap: 6px;
+  padding: 9px 20px;
+  background: ${({ theme }) => theme.colors.primary};
+  color: white; border: none;
+  border-radius: ${({ theme }) => theme.radii.sm};
+  font-size: 13px; font-weight: 500; cursor: pointer; margin-top: 20px;
+  &:disabled          { opacity: 0.6; cursor: not-allowed; }
+  &:hover:not(:disabled) { background: ${({ theme }) => theme.colors.primaryDark}; }
+`;
+const SuccessMsg = styled.div`
+  display: flex; align-items: center; gap: 8px;
+  padding: 10px 14px; background: #DCFCE7;
+  border: 1px solid #86EFAC;
+  border-radius: ${({ theme }) => theme.radii.sm};
+  color: ${({ theme }) => theme.colors.success};
+  font-size: 13px; margin-top: 12px;
+`;
+const ErrMsg     = styled.div`
+  padding: 10px 14px; background: #FEF2F2;
+  border: 1px solid #FECACA;
+  border-radius: ${({ theme }) => theme.radii.sm};
+  color: ${({ theme }) => theme.colors.danger};
+  font-size: 13px; margin-top: 12px;
+`;
 
+// ─── Component ────────────────────────────────────────────────────────────────
 const ProfilePage = () => {
-  const dispatch    = useDispatch();
-  const { user, role } = useAuth();
+  const dispatch           = useDispatch();
+  const { user, role }     = useAuth();
+  const reduxUser          = useSelector((s) => s.auth.user);
+  const currentUser        = reduxUser || user;
 
   const [profileForm, setProfileForm] = useState({
-    first_name: user?.first_name || '',
-    last_name:  user?.last_name  || '',
-    phone:      user?.phone      || '',
-    bio:        user?.bio        || '',
+    first_name: currentUser?.first_name || '',
+    last_name:  currentUser?.last_name  || '',
+    phone:      currentUser?.phone      || '',
+    bio:        currentUser?.bio        || '',
   });
 
   const [pwdForm, setPwdForm] = useState({
@@ -61,18 +132,22 @@ const ProfilePage = () => {
   const pf = (k) => (e) => setProfileForm((p) => ({ ...p, [k]: e.target.value }));
   const wf = (k) => (e) => setPwdForm((p)     => ({ ...p, [k]: e.target.value }));
 
+  // ─── Save profile ──────────────────────────────────────────────────────────
   const handleProfileSave = async () => {
     setProfileSaving(true); setProfileMsg(null); setProfileErr(null);
     try {
-      const res = await axiosInstance.put(`/api/users/${user.id}`, {
+      const res         = await axiosInstance.put(`/api/users/${currentUser.id}`, {
         ...profileForm,
-        role_id: user.role_id,
-        status:  user.status,
+        role_id: currentUser.role_id,
+        status:  currentUser.status,
       });
       const updatedUser = res.data?.data;
-      // Update IndexedDB and Redux
-      await idbSet(IDB_KEYS.USER, updatedUser);
-      dispatch(loginSuccess({ user: updatedUser, token: null, csrfToken: null }));
+
+      // Preserve any fields not returned by the API
+      const merged = { ...currentUser, ...updatedUser };
+
+      await idbSet(IDB_KEYS.USER, merged);
+      dispatch(hydrateUser(merged));
       setProfileMsg('Profile updated successfully.');
     } catch (e) {
       setProfileErr(normalizeError(e).message);
@@ -81,6 +156,7 @@ const ProfilePage = () => {
     }
   };
 
+  // ─── Change password ───────────────────────────────────────────────────────
   const handlePasswordChange = async () => {
     if (pwdForm.new_password !== pwdForm.confirm_password) {
       setPwdErr('New passwords do not match.'); return;
@@ -103,46 +179,64 @@ const ProfilePage = () => {
     }
   };
 
-  const displayName = user?.first_name
-    ? `${user.first_name} ${user.last_name || ''}`.trim()
-    : user?.username;
+  // ─── Avatar letter ─────────────────────────────────────────────────────────
+  const avatarLetter = (
+    currentUser?.first_name?.[0] ||
+    currentUser?.username?.[0]   ||
+    '?'
+  ).toUpperCase();
 
   return (
     <Wrap>
-      {/* Profile Info */}
+
+      {/* ── Profile Card ──────────────────────────────────────────────── */}
       <Card>
         <CardTitle><UserOutlined /> My Profile</CardTitle>
 
         <AvatarSection>
-          <AvatarBig>
-            {(user?.first_name || user?.username || 'U')[0].toUpperCase()}
-          </AvatarBig>
-          <AvatarHint>
-            <AvatarName>{displayName}</AvatarName>
-            <AvatarRole>{role} · {user?.username}</AvatarRole>
-          </AvatarHint>
+          <AvatarBig>{avatarLetter}</AvatarBig>
+          <AvatarInfo>
+            <AvatarName>
+              {currentUser?.first_name
+                ? `${currentUser.first_name} ${currentUser.last_name || ''}`.trim()
+                : currentUser?.username}
+            </AvatarName>
+            <AvatarRole>{role}</AvatarRole>
+          </AvatarInfo>
         </AvatarSection>
 
         <Grid>
           <Field>
             <Label>First Name</Label>
-            <Input value={profileForm.first_name} onChange={pf('first_name')} placeholder="First name" />
+            <Input
+              value={profileForm.first_name}
+              onChange={pf('first_name')}
+              placeholder="First name"
+            />
           </Field>
           <Field>
             <Label>Last Name</Label>
-            <Input value={profileForm.last_name} onChange={pf('last_name')} placeholder="Last name" />
+            <Input
+              value={profileForm.last_name}
+              onChange={pf('last_name')}
+              placeholder="Last name"
+            />
           </Field>
           <Field>
             <Label>Username</Label>
-            <Input value={user?.username || ''} disabled />
+            <Input value={currentUser?.username || ''} disabled />
           </Field>
           <Field>
             <Label>Email</Label>
-            <Input value={user?.email || ''} disabled />
+            <Input value={currentUser?.email || ''} disabled />
           </Field>
           <Field>
             <Label>Phone</Label>
-            <Input value={profileForm.phone} onChange={pf('phone')} placeholder="+91 98765 43210" />
+            <Input
+              value={profileForm.phone}
+              onChange={pf('phone')}
+              placeholder="+91 98765 43210"
+            />
           </Field>
           <Field>
             <Label>Role</Label>
@@ -168,7 +262,7 @@ const ProfilePage = () => {
         </SaveBtn>
       </Card>
 
-      {/* Change Password */}
+      {/* ── Password Card ─────────────────────────────────────────────── */}
       <Card>
         <CardTitle><LockOutlined /> Change Password</CardTitle>
 
@@ -181,6 +275,7 @@ const ProfilePage = () => {
             placeholder="Enter current password"
           />
         </Field>
+
         <Grid>
           <Field>
             <Label>New Password</Label>
@@ -210,6 +305,7 @@ const ProfilePage = () => {
           {pwdSaving ? 'Changing...' : 'Change Password'}
         </SaveBtn>
       </Card>
+
     </Wrap>
   );
 };

@@ -27,12 +27,36 @@ const xorDecipher = (encoded, key) => {
 export const encryptToken = (token) => xorCipher(token, SECRET);
 export const decryptToken = (enc)   => xorDecipher(enc, SECRET);
 
+// ─── Check if a JWT token is expired ─────────────────────────────────────────
+export const isTokenExpired = (token) => {
+  if (!token) return true;
+  try {
+    const payload = JSON.parse(atob(token.split('.')[1]));
+    // exp is in seconds — compare with current time in seconds
+    return payload.exp < Math.floor(Date.now() / 1000);
+  } catch {
+    return true; // if we can't decode it, treat as expired
+  }
+};
+
 // ─── Access Token — localStorage (encrypted) ─────────────────────────────────
 export const TOKEN_KEY = 'hc_at';
 
 export const setToken   = (t) => localStorage.setItem(TOKEN_KEY, encryptToken(t));
-export const getToken   = () => { const e = localStorage.getItem(TOKEN_KEY); return e ? decryptToken(e) : null; };
 export const clearToken = () => localStorage.removeItem(TOKEN_KEY);
+
+// getToken returns the token ONLY if it is not expired
+// If expired — clears it from storage and returns null
+export const getToken = () => {
+  const enc = localStorage.getItem(TOKEN_KEY);
+  if (!enc) return null;
+  const token = decryptToken(enc);
+  if (!token || isTokenExpired(token)) {
+    clearToken(); // auto-clear expired token
+    return null;
+  }
+  return token;
+};
 
 // ─── CSRF Token — sessionStorage ─────────────────────────────────────────────
 export const CSRF_KEY = 'hc_csrf';
@@ -48,14 +72,10 @@ export const setTenantId   = (id) => sessionStorage.setItem(TENANT_KEY, String(i
 export const getTenantId   = ()   => sessionStorage.getItem(TENANT_KEY);
 export const clearTenantId = ()   => sessionStorage.removeItem(TENANT_KEY);
 
-// ─── Legacy helpers (kept for backward compat — data now in IndexedDB) ───────
-// These are no-ops now; actual user data goes through indexedDB.js
+// ─── Legacy helpers ───────────────────────────────────────────────────────────
 export const setUser   = () => {};
 export const getUser   = () => null;
-export const clearUser = () => {
-  // clean up old localStorage key if present
-  localStorage.removeItem('hc_user');
-};
+export const clearUser = () => { localStorage.removeItem('hc_user'); };
 
 // ─── Clear All ────────────────────────────────────────────────────────────────
 export const clearAll = () => {
