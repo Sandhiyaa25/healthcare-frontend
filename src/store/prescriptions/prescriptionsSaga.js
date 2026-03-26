@@ -108,6 +108,7 @@ function* createPrescriptionSaga({ payload }) {
     }
     const res = yield call(createPrescriptionApi, payload.data);
     yield put(createPrescriptionSuccess(res.data?.data));
+    yield put(fetchPrescriptionsRequest({ page: 1, perPage: 5 }));
     if (payload.onSuccess) payload.onSuccess();
   } catch (e) {
     yield put(createPrescriptionFailure(normalizeError(e).message));

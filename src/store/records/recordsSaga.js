@@ -81,6 +81,7 @@ function* createRecordSaga({ payload }) {
     }
     const res = yield call(createRecordApi, payload.data);
     yield put(createRecordSuccess(res.data?.data));
+    yield put(fetchRecordsRequest({ page: 1, perPage: 5 }));
     if (payload.onSuccess) payload.onSuccess();
   } catch (e) {
     yield put(createRecordFailure(normalizeError(e).message));
@@ -92,6 +93,7 @@ function* updateRecordSaga({ payload }) {
   try {
     const res = yield call(updateRecordApi, payload.id, payload.data);
     yield put(updateRecordSuccess(res.data?.data));
+    yield put(fetchRecordsRequest({ page: payload.page ?? 1, perPage: 5 }));
     if (payload.onSuccess) payload.onSuccess();
   } catch (e) {
     yield put(updateRecordFailure(normalizeError(e).message));

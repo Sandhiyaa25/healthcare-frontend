@@ -80,7 +80,8 @@ function* createPatientSaga({ payload }) {
     );
     if (queued) { yield put(createPatientSuccess(null)); return; }
     const res = yield call(createPatientApi, payload);
-    yield put(createPatientSuccess(res.data?.data ?? null));
+    const patient = res.data?.data ?? res.data?.patient ?? res.data ?? null;
+    yield put(createPatientSuccess(patient));
     yield put(fetchPatientsRequest({ page: 1, per_page: 5 }));
   } catch (e) {
     yield put(createPatientFailure(normalizeError(e).message));

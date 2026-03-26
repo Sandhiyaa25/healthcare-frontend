@@ -95,6 +95,7 @@ const prescriptionsSlice = createSlice({
       state.saveError = null;
     },
     createPrescriptionSuccess: (state, { payload }) => {
+      state.cache = {};
       state.saving = false;
       if (payload) {
         state.list = [payload, ...state.list];

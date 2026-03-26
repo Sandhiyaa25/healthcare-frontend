@@ -99,6 +99,7 @@ const patientsSlice = createSlice({
       state.error  = null;
     },
     createPatientSuccess: (state, { payload }) => {
+      state.cache = {};
       state.saving = false;
       state.error  = null;
       // Only prepend to list if payload is a valid patient object with an id
@@ -117,6 +118,7 @@ const patientsSlice = createSlice({
       state.error  = null;
     },
     updatePatientSuccess: (state, { payload }) => {
+      state.cache = {};
       state.saving = false;
       state.error  = null;
       if (payload && payload.id) {
@@ -135,6 +137,7 @@ const patientsSlice = createSlice({
       state.error  = null;
     },
     deletePatientSuccess: (state, { payload }) => {
+      state.cache = {};
       state.saving = false;
       state.error  = null;
       // payload = deleted patient id (number)

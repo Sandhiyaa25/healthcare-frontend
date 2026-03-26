@@ -26,6 +26,7 @@ const recordsSlice = createSlice({
 
     createRecordRequest:  (state) => { state.saving = true;  state.saveError = null; },
     createRecordSuccess:  (state, { payload }) => {
+      state.cache = {};
       state.saving = false;
       if (payload) {                          // ← guard against null (offline-queued)
       state.list   = [payload, ...state.list];
@@ -35,6 +36,7 @@ const recordsSlice = createSlice({
 
     updateRecordRequest:  (state) => { state.saving = true;  state.saveError = null; },
     updateRecordSuccess:  (state, { payload }) => {
+      state.cache = {};
       state.saving = false;
       state.list   = state.list.map((r) => r.id === payload.id ? payload : r);
       if (state.item?.id === payload.id) state.item = payload;

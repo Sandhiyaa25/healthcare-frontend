@@ -58,7 +58,7 @@ const PatientsListPage = () => {
 
   useEffect(() => {
     doFetch();
-  }, [currentPage, statusFilter, fetchPatients]);
+  }, [doFetch]);
 
   useEffect(() => {
     if (error) {

@@ -149,6 +149,7 @@ const appointmentsSlice = createSlice({
       state.error  = null;
     },
     statusSuccess: (state, { payload }) => {
+      state.cache = {};
       state.saving = false;
       state.list   = state.list.map((a) => (a.id === payload.id ? payload : a));
       state.item   = payload;

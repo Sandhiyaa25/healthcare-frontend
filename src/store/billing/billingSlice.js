@@ -81,6 +81,9 @@ const billingSlice = createSlice({
     paymentSuccess: (state, { payload }) => {
       state.paying = false;
       state.item   = payload;
+      if (payload?.id) {
+        state.list = state.list.map((inv) => inv.id === payload.id ? payload : inv);
+      }
     },
     paymentFailure: (state, { payload }) => {
       state.paying = false;

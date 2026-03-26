@@ -66,6 +66,7 @@ function* createInvoiceSaga({ payload }) {
     if (queued) { yield put(createInvoiceSuccess(null)); return; }
     const res = yield call(createInvoiceApi, payload);
     yield put(createInvoiceSuccess(res.data?.data));
+    yield put(fetchInvoicesRequest({ page: 1, per_page: 5 }));
   } catch (e) {
     yield put(createInvoiceFailure(normalizeError(e).message));
   }
