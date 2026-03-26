@@ -2,31 +2,81 @@ import { createSlice } from '@reduxjs/toolkit';
 
 const patientsSlice = createSlice({
   name: 'patients',
-  initialState: {
-    list:       [],
-    item:       null,
-    loading:    false,
-    saving:     false,
-    error:      null,
-    pagination: {},
+  // initialState: {
+  //   list:       [],
+  //   item:       null,
+  //   loading:    false,
+  //   saving:     false,
+  //   error:      null,
+  //   pagination: {},
+  // },
+    initialState: {
+    list:        [],
+    item:        null,
+    loading:     false,
+    saving:      false,
+    error:       null,
+    pagination:  {},
+    cache:       {},        // { [page]: [...] }
+    currentPage: 1,
+    prefetching: false,
   },
+
   reducers: {
     // ─── FETCH LIST ───────────────────────────────────────────────────────────
+    // fetchPatientsRequest: (state) => {
+    //   state.loading = true;
+    //   state.error   = null;
+    // },
+    // fetchPatientsSuccess: (state, { payload }) => {
+    //   state.loading    = false;
+    //   // payload = { patients: [...], pagination: {...} }  ← from backend fix
+    //   // OR payload = { data: [...], pagination: {...} }   ← legacy shape
+    //   // OR payload = [...]                                ← raw array fallback
+    //   state.list       = payload?.patients ?? payload?.data ?? (Array.isArray(payload) ? payload : []);
+    //   state.pagination = payload?.pagination ?? {};
+    // },
+    // fetchPatientsFailure: (state, { payload }) => {
+    //   state.loading = false;
+    //   state.error   = payload;
+    // },
     fetchPatientsRequest: (state) => {
       state.loading = true;
       state.error   = null;
     },
     fetchPatientsSuccess: (state, { payload }) => {
       state.loading    = false;
-      // payload = { patients: [...], pagination: {...} }  ← from backend fix
-      // OR payload = { data: [...], pagination: {...} }   ← legacy shape
-      // OR payload = [...]                                ← raw array fallback
-      state.list       = payload?.patients ?? payload?.data ?? (Array.isArray(payload) ? payload : []);
+      const list = payload?.patients ?? payload?.data ?? (Array.isArray(payload) ? payload : []);
+      state.list       = list;
       state.pagination = payload?.pagination ?? {};
+      // Store in cache keyed by page number
+      const page = payload?.pagination?.current_page ?? state.currentPage;
+      state.cache[page] = list;
     },
     fetchPatientsFailure: (state, { payload }) => {
       state.loading = false;
       state.error   = payload;
+    },
+
+    // ─── PREFETCH ─────────────────────────────────────────────────────────────
+    prefetchPatientsRequest: (state) => {
+      state.prefetching = true;
+    },
+    prefetchPatientsSuccess: (state, { payload }) => {
+      state.prefetching = false;
+      const list = payload?.patients ?? payload?.data ?? (Array.isArray(payload) ? payload : []);
+      const page = payload?.pagination?.current_page ?? payload?.page;
+      if (page) state.cache[page] = list;
+    },
+
+    // ─── PAGE NAV ─────────────────────────────────────────────────────────────
+    setCurrentPage: (state, { payload }) => {
+      state.currentPage = payload;
+      // Serve from cache instantly if available
+      if (state.cache[payload]) {
+        state.list    = state.cache[payload];
+        state.loading = false;
+      }
     },
 
     // ─── FETCH SINGLE ─────────────────────────────────────────────────────────
@@ -103,8 +153,18 @@ const patientsSlice = createSlice({
   },
 });
 
+// export const {
+//   fetchPatientsRequest, fetchPatientsSuccess, fetchPatientsFailure,
+//   fetchPatientRequest,  fetchPatientSuccess,  fetchPatientFailure,
+//   createPatientRequest, createPatientSuccess, createPatientFailure,
+//   updatePatientRequest, updatePatientSuccess, updatePatientFailure,
+//   deletePatientRequest, deletePatientSuccess, deletePatientFailure,
+//   clearItem, clearError,
+// } = patientsSlice.actions;
 export const {
   fetchPatientsRequest, fetchPatientsSuccess, fetchPatientsFailure,
+  prefetchPatientsRequest, prefetchPatientsSuccess,
+  setCurrentPage,
   fetchPatientRequest,  fetchPatientSuccess,  fetchPatientFailure,
   createPatientRequest, createPatientSuccess, createPatientFailure,
   updatePatientRequest, updatePatientSuccess, updatePatientFailure,

@@ -117,7 +117,7 @@ const PatientTable = ({
         size="middle"
         pagination={{
           current: currentPage,
-          pageSize: 20,
+          pageSize: 5,
           total: pagination?.total || 0,
           onChange: onPageChange,
           showTotal: (total) => `${total} patients total`,

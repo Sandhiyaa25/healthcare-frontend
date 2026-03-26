@@ -1,15 +1,18 @@
 import { all } from 'redux-saga/effects';
-import authSaga      from './auth/authSaga';
-import dashboardSaga from './dashboard/dashboardSaga';
-import patientsSaga  from './patients/patientsSaga';
-import appointmentsSaga from './appointments/appointmentsSaga';
+import authSaga          from './auth/authSaga';
+import dashboardSaga     from './dashboard/dashboardSaga';
+import patientsSaga      from './patients/patientsSaga';
+import appointmentsSaga  from './appointments/appointmentsSaga';
 import prescriptionsSaga from './prescriptions/prescriptionsSaga';
-import billingSaga   from './billing/billingSaga';
-import staffSaga     from './staff/staffSaga';
-import usersSaga     from './users/usersSaga';
-import messagesSaga  from './messages/messagesSaga';
-import calendarSaga  from './calendar/calendarSaga';
-import settingsSaga  from './settings/settingsSaga';
+import billingSaga       from './billing/billingSaga';
+import staffSaga         from './staff/staffSaga';
+import usersSaga         from './users/usersSaga';
+import messagesSaga      from './messages/messagesSaga';
+import calendarSaga      from './calendar/calendarSaga';
+import settingsSaga      from './settings/settingsSaga';
+import recordsSaga       from './records/recordsSaga';  
+import notificationsSaga from './notifications/notificationsSaga';
+import offlineQueueSaga  from './offlineQueue/offlineQueueSaga';
 
 export default function* rootSaga() {
   yield all([
@@ -24,5 +27,8 @@ export default function* rootSaga() {
     messagesSaga(),
     calendarSaga(),
     settingsSaga(),
+    recordsSaga(),  
+    notificationsSaga(),
+    offlineQueueSaga(),    // ← new
   ]);
 }

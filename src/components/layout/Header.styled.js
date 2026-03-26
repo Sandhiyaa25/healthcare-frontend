@@ -64,14 +64,31 @@ export const AvatarBtn = styled.button`
   &:hover { background: ${({ theme }) => theme.colors.bgBase}; }
 `;
 
+// export const AvatarCircle = styled.div`
+//   width: 28px; height: 28px;
+//   border-radius: 50%;
+//   background: ${({ theme }) => theme.colors.primary};
+//   color: white;
+//   font-size: 12px; font-weight: 700;
+//   display: flex; align-items: center; justify-content: center;
+//   text-transform: uppercase;
+// `;
+
+
 export const AvatarCircle = styled.div`
-  width: 28px; height: 28px;
+  width: 34px;
+  height: 34px;
   border-radius: 50%;
   background: ${({ theme }) => theme.colors.primary};
-  color: white;
-  font-size: 12px; font-weight: 700;
-  display: flex; align-items: center; justify-content: center;
+   color: ${({ theme }) => theme.colors.textInverse};
+  font-size: 14px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   text-transform: uppercase;
+  overflow: hidden;  /* ← critical for image */
+  flex-shrink: 0;
 `;
 
 export const Divider = styled.div`

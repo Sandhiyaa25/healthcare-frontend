@@ -1,4 +1,4 @@
-import { call, put, takeLatest } from 'redux-saga/effects';
+import { call, put, takeLatest, select } from 'redux-saga/effects';
 import {
   fetchInvoicesApi, fetchInvoiceApi, fetchSummaryApi,
   createInvoiceApi, recordPaymentApi,
@@ -11,6 +11,22 @@ import {
   paymentRequest,       paymentSuccess,       paymentFailure,
 } from './billingSlice';
 import { normalizeError } from '../../utils/errorNormalizer';
+import { queueAdd, queueGetAll } from '../offlineQueue/offlineQueueDB';
+import { setQueueItems, showOfflineBanner } from '../offlineQueue/offlineQueueSlice';
+
+const uuid = () => 'oq_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2,8);
+
+function* checkAndQueue(label, action, endpoint, method, payload) {
+  const isOnline = yield select((s) => s.offlineQueue?.isOnline ?? navigator.onLine);
+  if (!isOnline) {
+    yield call(queueAdd, { id: uuid(), created_at: Date.now(), action, label, endpoint, method, payload });
+    const items = yield call(queueGetAll);
+    yield put(setQueueItems(items));
+    yield put(showOfflineBanner());
+    return true;
+  }
+  return false;
+}
 
 function* fetchInvoicesSaga({ payload }) {
   try {
@@ -44,6 +60,10 @@ function* fetchSummarySaga() {
 
 function* createInvoiceSaga({ payload }) {
   try {
+    const queued = yield call(checkAndQueue,
+      'Create Invoice', 'CREATE_INVOICE', '/api/billing', 'post', payload
+    );
+    if (queued) { yield put(createInvoiceSuccess(null)); return; }
     const res = yield call(createInvoiceApi, payload);
     yield put(createInvoiceSuccess(res.data?.data));
   } catch (e) {
@@ -53,6 +73,10 @@ function* createInvoiceSaga({ payload }) {
 
 function* recordPaymentSaga({ payload: { id, data } }) {
   try {
+    const queued = yield call(checkAndQueue,
+      'Record Payment', 'RECORD_PAYMENT', `/api/billing/${id}/payment`, 'post', data
+    );
+    if (queued) { yield put(paymentSuccess(null)); return; }
     const res = yield call(recordPaymentApi, id, data);
     yield put(paymentSuccess(res.data?.data));
   } catch (e) {

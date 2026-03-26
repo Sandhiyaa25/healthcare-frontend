@@ -35,3 +35,46 @@ export const BottomGrid = styled.div`
   grid-template-columns: 1fr;
   gap: ${({ theme }) => theme.spacing.md};
 `;
+
+export const RxCard = styled.div`
+  background: ${({ theme }) => theme.colors.bgCard};
+  border: 1px solid ${({ theme }) => theme.colors.border};
+  border-radius: ${({ theme }) => theme.radii.md};
+  overflow: hidden;
+`;
+export const RxHead = styled.div`
+  padding: 14px 20px;
+  border-bottom: 1px solid ${({ theme }) => theme.colors.border};
+  background: ${({ theme }) => theme.colors.bgBase};
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: ${({ theme }) => theme.colors.textPrimary};
+`;
+export const RxItem = styled.div`
+  padding: 12px 20px;
+  border-bottom: 1px solid ${({ theme }) => theme.colors.border};
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  &:last-child { border-bottom: none; }
+`;
+export const RxName = styled.p`
+  font-size: 13px;
+  font-weight: 500;
+  color: ${({ theme }) => theme.colors.textPrimary};
+  margin: 0 0 2px 0;
+`;
+export const RxMeta = styled.p`
+  font-size: 11px;
+  color: ${({ theme }) => theme.colors.textMuted};
+  margin: 0;
+`;
+export const RxEmpty = styled.div`
+  padding: 32px 20px;
+  text-align: center;
+  color: ${({ theme }) => theme.colors.textMuted};
+  font-size: 13px;
+`;

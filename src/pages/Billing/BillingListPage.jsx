@@ -45,26 +45,29 @@ const BillingListPage = () => {
   const [paymentTarget, setPaymentTarget]     = useState(null);
 
   useEffect(() => {
-    fetchInvoices({ page: 1, per_page: 20 });
+    fetchInvoices({ page: 1, per_page: 5 });
     fetchSummary();
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     setPage(1);
-    fetchInvoices({ status: statusFilter || undefined, page: 1, per_page: 20 });
+    fetchInvoices({ status: statusFilter || undefined, page: 1, per_page: 5 });
   }, [statusFilter]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handlePageChange = (p) => {
     setPage(p);
-    fetchInvoices({ status: statusFilter || undefined, page: p, per_page: 20 });
+    fetchInvoices({ status: statusFilter || undefined, page: p, per_page: 5 });
   };
 
   const handleRefresh = () => {
-    fetchInvoices({ status: statusFilter || undefined, page, per_page: 20 });
+    fetchInvoices({ status: statusFilter || undefined, page, per_page: 5 });
     fetchSummary();
   };
 
-  const canWrite = ['admin', 'receptionist', 'nurse'].includes(role);
+  // const canWrite = ['admin', 'receptionist', 'nurse'].includes(role);
+
+const canCreate = ['admin', 'receptionist'].includes(role);
+const canView   = ['admin', 'doctor', 'nurse', 'receptionist', 'patient'].includes(role);
 
   return (
     <Wrap>
@@ -78,7 +81,7 @@ const BillingListPage = () => {
             <option value="paid">Paid</option>
           </FilterSelect>
           <IconBtn onClick={handleRefresh} title="Refresh"><ReloadOutlined /></IconBtn>
-          {canWrite && (
+          {canCreate && (
             <AddBtn onClick={() => setShowInvoiceForm(true)}>
               <PlusOutlined /> New Invoice
             </AddBtn>
@@ -128,7 +131,7 @@ const BillingListPage = () => {
                         <ABtn onClick={() => navigate(`/billing/${inv.id}`)}>
                           <EyeOutlined /> View
                         </ABtn>
-                        {canWrite && inv.status !== 'paid' && (
+                        {canCreate && inv.status !== 'paid' && (
                           <ABtn onClick={() => setPaymentTarget(inv)}>
                             <DollarOutlined /> Pay
                           </ABtn>
@@ -163,7 +166,7 @@ const BillingListPage = () => {
           onClose={() => setShowInvoiceForm(false)}
           onSuccess={() => {
             setShowInvoiceForm(false);
-            fetchInvoices({ page: 1, per_page: 20 });
+            fetchInvoices({ page: 1, per_page: 5 });
             fetchSummary();
           }}
         />
@@ -175,7 +178,7 @@ const BillingListPage = () => {
           onClose={() => setPaymentTarget(null)}
           onSuccess={() => {
             setPaymentTarget(null);
-            fetchInvoices({ status: statusFilter || undefined, page, per_page: 20 });
+            fetchInvoices({ status: statusFilter || undefined, page, per_page: 5 });
             fetchSummary();
           }}
         />

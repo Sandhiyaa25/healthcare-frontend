@@ -102,8 +102,8 @@ const PatientForm = ({ open, onClose, onSuccess, initialData }) => {
       okButtonProps={{ loading: saving }}
       cancelButtonProps={{ disabled: saving }}
       width={720}
-      destroyOnClose
-      maskClosable={false}
+      destroyOnHidden
+      mask={{ closable: false }}
     >
       {error && (
         <Alert

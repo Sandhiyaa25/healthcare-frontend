@@ -56,10 +56,18 @@ const billingSlice = createSlice({
       state.saving = true;
       state.error  = null;
     },
+    // createInvoiceSuccess: (state, { payload }) => {
+    //   state.saving = false;
+    //   state.list   = [payload, ...state.list];
+    // },
+
     createInvoiceSuccess: (state, { payload }) => {
-      state.saving = false;
-      state.list   = [payload, ...state.list];
-    },
+  state.saving = false;
+  if (payload) {                          // ← guard against null (offline-queued)
+    state.list = [payload, ...state.list];
+  }
+},
+
     createInvoiceFailure: (state, { payload }) => {
       state.saving = false;
       state.error  = payload;

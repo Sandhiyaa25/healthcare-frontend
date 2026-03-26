@@ -1,4 +1,7 @@
 import React, { useEffect, useState } from 'react';
+import axiosInstance from '../../api/axiosInstance';
+import { normalizeError } from '../../utils/errorNormalizer';
+import dayjs from 'dayjs';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Tabs, Descriptions, Tag, Skeleton } from 'antd';
 import { ArrowLeftOutlined, EditOutlined } from '@ant-design/icons';
@@ -32,17 +35,49 @@ const STATUS_VARIANT = {
   deceased: 'danger',
 };
 
+
 const PatientDetailPage = () => {
+  
   const { id } = useParams();
   const navigate = useNavigate();
   const { patient, loading, fetchPatient, clearPatient } = usePatients();
   const { role } = useAuth();
   const [showEdit, setShowEdit] = useState(false);
+const [patientAppts,    setPatientAppts]    = useState([]);
+const [patientInvoices, setPatientInvoices] = useState([]);
+const [loadingAppts,    setLoadingAppts]    = useState(false);
+const [loadingBilling,  setLoadingBilling]  = useState(false);
+
 
   useEffect(() => {
     fetchPatient(Number(id));
     return () => clearPatient();
   }, [id, fetchPatient, clearPatient]);
+
+  // Load them when patient is loaded:
+useEffect(() => {
+  if (!patient?.id) return;
+  // Appointments
+  setLoadingAppts(true);
+  axiosInstance.get('/api/appointments', { params: { patient_id: patient.id, per_page: 5 } })
+    .then((r) => {
+      const raw = r.data?.data;
+      setPatientAppts(Array.isArray(raw) ? raw
+        : Array.isArray(raw?.appointments) ? raw.appointments : []);
+    })
+    .catch(() => setPatientAppts([]))
+    .finally(() => setLoadingAppts(false));
+  // Billing
+  setLoadingBilling(true);
+  axiosInstance.get('/api/billing', { params: { patient_id: patient.id, per_page: 5 } })
+    .then((r) => {
+      const raw = r.data?.data;
+      setPatientInvoices(Array.isArray(raw) ? raw
+        : Array.isArray(raw?.invoices) ? raw.invoices : []);
+    })
+    .catch(() => setPatientInvoices([]))
+    .finally(() => setLoadingBilling(false));
+}, [patient?.id]);
 
   const tabItems = [
     {
@@ -82,28 +117,97 @@ const PatientDetailPage = () => {
         </TabContent>
       ),
     },
-    {
-      key: 'appointments',
-      label: 'Appointments',
-      children: (
-        <TabContent>
-          <PlaceholderMsg>
-            Appointment history will appear here once the Appointments module is built.
-          </PlaceholderMsg>
-        </TabContent>
-      ),
-    },
-    {
-      key: 'billing',
-      label: 'Billing',
-      children: (
-        <TabContent>
-          <PlaceholderMsg>
-            Billing history will appear here once the Billing module is built.
-          </PlaceholderMsg>
-        </TabContent>
-      ),
-    },
+    // Appointments tab:
+{
+  key: 'appointments',
+  label: 'Appointments',
+  children: (
+    <TabContent>
+      {loadingAppts ? (
+        <PlaceholderMsg>Loading...</PlaceholderMsg>
+      ) : patientAppts.length === 0 ? (
+        <PlaceholderMsg>No appointments found for this patient.</PlaceholderMsg>
+      ) : (
+        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+          <thead>
+            <tr style={{ borderBottom: '1px solid' }}>
+              <th style={{ padding: '8px', textAlign: 'left', color: '#64748B', fontWeight: 600 }}>Date</th>
+              <th style={{ padding: '8px', textAlign: 'left', color: '#64748B', fontWeight: 600 }}>Doctor</th>
+              <th style={{ padding: '8px', textAlign: 'left', color: '#64748B', fontWeight: 600 }}>Type</th>
+              <th style={{ padding: '8px', textAlign: 'left', color: '#64748B', fontWeight: 600 }}>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            {patientAppts.map((a) => (
+              <tr key={a.id} style={{ borderBottom: '1px solid rgba(0,0,0,0.06)' }}>
+                <td style={{ padding: '10px 8px' }}>
+                  {a.appointment_date ? dayjs(a.appointment_date).format('DD MMM YYYY') : '—'}
+                  {a.start_time && <span style={{ color: '#94A3B8', marginLeft: 6 }}>{a.start_time.slice(0,5)}</span>}
+                </td>
+                <td style={{ padding: '10px 8px' }}>{a.doctor_name || `Doctor #${a.doctor_id}`}</td>
+                <td style={{ padding: '10px 8px', textTransform: 'capitalize' }}>{a.type || '—'}</td>
+                <td style={{ padding: '10px 8px' }}>
+                  <Badge variant={
+                    a.status === 'confirmed' ? 'primary'
+                    : a.status === 'completed' ? 'success'
+                    : a.status === 'cancelled' ? 'danger'
+                    : 'warning'
+                  }>{a.status}</Badge>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+    </TabContent>
+  ),
+},
+
+// Billing tab:
+{
+  key: 'billing',
+  label: 'Billing',
+  children: (
+    <TabContent>
+      {loadingBilling ? (
+        <PlaceholderMsg>Loading...</PlaceholderMsg>
+      ) : patientInvoices.length === 0 ? (
+        <PlaceholderMsg>No billing records found for this patient.</PlaceholderMsg>
+      ) : (
+        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+          <thead>
+            <tr style={{ borderBottom: '1px solid' }}>
+              <th style={{ padding: '8px', textAlign: 'left', color: '#64748B', fontWeight: 600 }}>Invoice #</th>
+              <th style={{ padding: '8px', textAlign: 'left', color: '#64748B', fontWeight: 600 }}>Amount</th>
+              <th style={{ padding: '8px', textAlign: 'left', color: '#64748B', fontWeight: 600 }}>Status</th>
+              <th style={{ padding: '8px', textAlign: 'left', color: '#64748B', fontWeight: 600 }}>Date</th>
+            </tr>
+          </thead>
+          <tbody>
+            {patientInvoices.map((inv) => (
+              <tr key={inv.id} style={{ borderBottom: '1px solid rgba(0,0,0,0.06)' }}>
+                <td style={{ padding: '10px 8px' }}>#{inv.id}</td>
+                <td style={{ padding: '10px 8px' }}>
+                  ₹{parseFloat(inv.total_amount || inv.amount || 0).toLocaleString('en-IN')}
+                </td>
+                <td style={{ padding: '10px 8px' }}>
+                  <Badge variant={
+                    inv.status === 'paid' ? 'success'
+                    : inv.status === 'partial' ? 'info'
+                    : 'warning'
+                  }>{inv.status}</Badge>
+                </td>
+                <td style={{ padding: '10px 8px' }}>
+                  {inv.created_at ? dayjs(inv.created_at).format('DD MMM YYYY') : '—'}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+    </TabContent>
+  ),
+},
   ];
 
   return (

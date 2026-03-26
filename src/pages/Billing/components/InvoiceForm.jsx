@@ -25,23 +25,44 @@ const InvoiceForm = ({ onClose, onSuccess }) => {
 
   const submittedRef = useRef(false);
 
+  // useEffect(() => {
+  //   axiosInstance
+  //     .get('/api/appointments', { params: { per_page: 50 } })
+  //     .then((res) => {
+  //       const d = res.data?.data?.appointments || res.data?.data || [];
+  //       const all = Array.isArray(d) ? d : [];
+  //       // BUSINESS RULE: Only confirmed or completed appointments can be invoiced.
+  //       // Scheduled/cancelled appointments are filtered out so receptionist
+  //       // cannot accidentally bill for an unconfirmed or cancelled visit.
+  //       const billable = all.filter(
+  //         (a) => a.status === 'confirmed' || a.status === 'completed'
+  //       );
+  //       setAppointments(billable);
+  //     })
+  //     .catch(() => {})
+  //     .finally(() => setApptLoading(false));
+  // }, []);
+
   useEffect(() => {
-    axiosInstance
-      .get('/api/appointments', { params: { per_page: 100 } })
-      .then((res) => {
-        const d = res.data?.data?.appointments || res.data?.data || [];
-        const all = Array.isArray(d) ? d : [];
-        // BUSINESS RULE: Only confirmed or completed appointments can be invoiced.
-        // Scheduled/cancelled appointments are filtered out so receptionist
-        // cannot accidentally bill for an unconfirmed or cancelled visit.
-        const billable = all.filter(
-          (a) => a.status === 'confirmed' || a.status === 'completed'
-        );
-        setAppointments(billable);
-      })
-      .catch(() => {})
-      .finally(() => setApptLoading(false));
-  }, []);
+  // Guard: skip fetch when offline — no appointments to load
+  if (!navigator.onLine) {
+    setApptLoading(false);
+    return;
+  }
+  axiosInstance
+    .get('/api/appointments', { params: { per_page: 50 } })
+    .then((res) => {
+      const d = res.data?.data?.appointments || res.data?.data || [];
+      const all = Array.isArray(d) ? d : [];
+      const billable = all.filter(
+        (a) => a.status === 'confirmed' || a.status === 'completed'
+      );
+      setAppointments(billable);
+    })
+    .catch(() => {})
+    .finally(() => setApptLoading(false));
+}, []);
+
 
   useEffect(() => {
     if (submittedRef.current && !saving) {

@@ -17,7 +17,8 @@ export const SendButton = styled.button`
   font-weight: 500;
   background: ${({ theme, disabled }) =>
     disabled ? theme.colors.border : theme.colors.primary};
-  color: ${({ disabled }) => (disabled ? '#94A3B8' : '#ffffff')};
+  color: ${({ disabled, theme }) =>
+    disabled ? theme.colors.textMuted : theme.colors.textInverse};
   border: none;
   border-radius: 8px;
   cursor: ${({ disabled }) => (disabled ? 'not-allowed' : 'pointer')};

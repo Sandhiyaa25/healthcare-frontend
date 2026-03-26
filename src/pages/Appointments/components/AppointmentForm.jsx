@@ -36,7 +36,7 @@ const AppointmentForm = ({ open, onClose, onSuccess, initialData }) => {
     setLoadingDoctors(true);
 
     const load = () =>
-      fetchStaffApi({ per_page: 100 })
+      fetchStaffApi({ per_page: 50 })
         .then((res) => {
           const raw = res.data?.data;
           const all = Array.isArray(raw)
@@ -48,8 +48,12 @@ const AppointmentForm = ({ open, onClose, onSuccess, initialData }) => {
               s.role_slug === 'doctor' ||
               s.role_name?.toLowerCase() === 'doctor' ||
               s.role_name?.toLowerCase()?.includes('doctor');
-            const isActive = !s.status || s.status === 'active';
-            return isDoctor && isActive;
+
+
+//             const isActive = s.status === 'active';
+// return isDoctor && isActive;
+const isActive = s.status === 'active' && s.user_status === 'active';
+return isDoctor && isActive;
           });
           setDoctors(doctors);
         });
@@ -73,7 +77,7 @@ const AppointmentForm = ({ open, onClose, onSuccess, initialData }) => {
     if (!open) return;
     if (role === 'patient') return; // patient role: backend auto-injects patient_id
     setLoadingPatients(true);
-    fetchPatientsApi({ per_page: 100 })
+    fetchPatientsApi({ per_page: 50 })
       .then((res) => {
         // res.data = { status: true, data: { patients: [...], pagination: {...} } }
         //         OR { status: true, data: [...] }
@@ -136,9 +140,17 @@ const AppointmentForm = ({ open, onClose, onSuccess, initialData }) => {
       const data = {
         patient_id:       values.patient_id,
         doctor_id:        role === 'doctor' ? user.id : values.doctor_id,
-        appointment_date: values.appointment_date.format('YYYY-MM-DD'),
-        start_time:       values.start_time.format('HH:mm'),
-        end_time:         values.end_time.format('HH:mm'),
+        // appointment_date: values.appointment_date.format('YYYY-MM-DD'),
+        // start_time:       values.start_time.format('HH:mm'),
+        // end_time:         values.end_time.format('HH:mm'),
+
+        // Capture these at submit time (before async queue stores it)
+appointment_date: values.appointment_date.format('YYYY-MM-DD'), // stays local date
+start_time:       values.start_time.format('HH:mm:ss'),   // include seconds for precision
+end_time:         values.end_time.format('HH:mm:ss'),
+// _queued_at_offset: Intl.DateTimeFormat().resolvedOptions().timeZone, // store TZ for reference
+
+
         type:             values.type || 'consultation',
         notes:            values.notes || undefined,
       };
@@ -190,8 +202,8 @@ const AppointmentForm = ({ open, onClose, onSuccess, initialData }) => {
       okButtonProps={{ loading: saving }}
       cancelButtonProps={{ disabled: saving }}
       width={640}
-      destroyOnClose
-      maskClosable={false}
+      destroyOnHidden
+      mask={{ closable: false }}
     >
       <ConflictAlert conflict={conflict} />
 
@@ -313,9 +325,11 @@ const AppointmentForm = ({ open, onClose, onSuccess, initialData }) => {
                 rules={[{ required: true, message: 'Please select start time' }]}
               >
                 <TimePicker
-                  format="HH:mm"
+                  // format="HH:mm"
+                  format="h:mm A"
+                  use12Hours
                   minuteStep={15}
-                  use12Hours={false}
+                  //use12Hours={false}
                   style={{ width: '100%' }}
                   placeholder="Start time"
                   onChange={handleStartTimeChange}
@@ -340,9 +354,11 @@ const AppointmentForm = ({ open, onClose, onSuccess, initialData }) => {
                 ]}
               >
                 <TimePicker
-                  format="HH:mm"
+                  //format="HH:mm"
+                  format="h:mm A"
+  use12Hours
                   minuteStep={15}
-                  use12Hours={false}
+                  //use12Hours={false}
                   style={{ width: '100%' }}
                   placeholder="End time"
                   onChange={() => clearConflict()}

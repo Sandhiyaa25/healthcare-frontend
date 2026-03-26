@@ -34,7 +34,7 @@ export const SearchInput = styled.input`
   border: 1px solid ${({ theme }) => theme.colors.border};
   border-radius: 8px;
   font-size: 13px;
-  background: #ffffff;
+  background: ${({ theme }) => theme.colors.bgCard};
   color: ${({ theme }) => theme.colors.textPrimary};
   outline: none;
   box-sizing: border-box;

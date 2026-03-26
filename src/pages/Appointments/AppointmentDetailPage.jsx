@@ -156,7 +156,7 @@ const AppointmentDetailPage = () => {
                 </Button>
               )}
 
-              {status === 'confirmed' && canNurseOrAbove && (
+              {/* {status === 'confirmed' && canNurseOrAbove && (
                 <Button
                   variant="primary"
                   loading={saving}
@@ -164,7 +164,31 @@ const AppointmentDetailPage = () => {
                 >
                   Mark as Completed
                 </Button>
-              )}
+              )} */}
+{status === 'confirmed' && canNurseOrAbove && (() => {
+ const now = new Date();
+ const apptDate = appointment.appointment_date; // 'YYYY-MM-DD'
+ const apptEnd  = appointment.end_time;         // 'HH:mm:ss'
+ //const todayStr = now.toISOString().slice(0, 10);
+ const todayStr = now.toLocaleDateString('en-CA');
+ const nowTime  = now.toTimeString().slice(0, 8); // 'HH:mm:ss'
+ const canComplete =
+   apptDate < todayStr ||
+   (apptDate === todayStr && apptEnd <= nowTime);
+ return (
+   <Button
+     variant="primary"
+     loading={saving}
+     disabled={!canComplete}
+     title={!canComplete ? 'Cannot complete before appointment end time' : ''}
+     onClick={() => updateStatus(appointment.id, 'completed')}
+   >
+     Mark as Completed
+   </Button>
+ );
+})()}
+
+
 
               {!isCancelledOrCompleted && (
                 <Popconfirm

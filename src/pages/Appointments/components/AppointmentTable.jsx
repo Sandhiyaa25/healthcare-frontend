@@ -2,7 +2,7 @@ import React from 'react';
 import { Table, Popconfirm, Tooltip } from 'antd';
 import { EyeOutlined, EditOutlined, StopOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
-import utc from 'dayjs/plugin/utc';
+//import utc from 'dayjs/plugin/utc';
 import StatusBadge from './StatusBadge';
 import useAppointments from '../../../hooks/useAppointments';
 import {
@@ -14,7 +14,7 @@ import {
   NameSub,
 } from './AppointmentTable.styled';
 
-dayjs.extend(utc);
+//dayjs.extend(utc);
 
 
 const TERMINAL_STATUSES = ['cancelled', 'completed'];
@@ -27,10 +27,20 @@ const calcDuration = (start, end) => {
   return diff > 0 ? `${diff} min` : '—';
 };
 
+// const formatApptTime = (appt) => {
+//   if (!appt.appointment_date || !appt.start_time) return '—';
+//   return dayjs.utc(`${appt.appointment_date} ${appt.start_time}`).local().format('DD MMM YYYY HH:mm');
+// };
 const formatApptTime = (appt) => {
   if (!appt.appointment_date || !appt.start_time) return '—';
-  return dayjs.utc(`${appt.appointment_date} ${appt.start_time}`).local().format('DD MMM YYYY HH:mm');
+  // start_time is already a plain local time string "HH:mm:ss" — NOT a UTC timestamp.
+  // Do NOT call .utc().local() — that adds +5:30 (IST offset) incorrectly.
+  return dayjs(
+    `${appt.appointment_date} ${appt.start_time}`,
+    'YYYY-MM-DD HH:mm:ss'
+  ).format('DD MMM YYYY h:mm A');
 };
+
 
 const capitalize = (s) => s ? s.charAt(0).toUpperCase() + s.slice(1).replace('_', ' ') : '—';
 
@@ -46,11 +56,33 @@ const AppointmentTable = ({
 }) => {
   const { cancelAppointment } = useAppointments();
 
-  const canEdit = (appt) =>
-    role !== 'patient' && !TERMINAL_STATUSES.includes(appt.status);
+  // const canEdit = (appt) =>
+  //   role !== 'patient' && !TERMINAL_STATUSES.includes(appt.status);
+const canEdit = (appt) => {
+  // Admin: view only — no edit
+  if (role === 'admin') return false;
+  // Patient: no edit
+  if (role === 'patient') return false;
+  // Terminal statuses: no edit for anyone
+  if (TERMINAL_STATUSES.includes(appt.status)) return false;
+  // Doctor: only their own
+  if (role === 'doctor') return true;
+  // Nurse, Receptionist: can edit
+  return ['nurse', 'receptionist'].includes(role);
+};
 
-  const canCancel = (appt) =>
-    !TERMINAL_STATUSES.includes(appt.status);
+  // const canCancel = (appt) =>
+  //   !TERMINAL_STATUSES.includes(appt.status);
+
+const canCancel = (appt) => {
+  if (TERMINAL_STATUSES.includes(appt.status)) return false;
+  // Admin: no cancel
+  if (role === 'admin') return false;
+  // Patient: can cancel their own
+  if (role === 'patient') return true;
+  // Doctor, nurse, receptionist: can cancel
+  return ['doctor', 'nurse', 'receptionist'].includes(role);
+};
 
   const columns = [
     {
@@ -141,7 +173,7 @@ const AppointmentTable = ({
         size="middle"
         pagination={{
           current: currentPage,
-          pageSize: 20,
+          pageSize: 5,
           total: pagination?.total || 0,
           onChange: onPageChange,
           showTotal: (total) => `${total} appointments total`,

@@ -1,4 +1,6 @@
 import React, { useEffect, useState, useCallback, useRef } from 'react';
+import { useSelector, useDispatch } from 'react-redux';
+import { setCurrentPage } from '../../store/patients/patientsSlice';
 import { useNavigate } from 'react-router-dom';
 import { notification } from 'antd';
 import { PlusOutlined, SearchOutlined, ReloadOutlined } from '@ant-design/icons';
@@ -25,7 +27,10 @@ const PatientsListPage = () => {
   const [statusFilter, setStatusFilter] = useState('');
   const [showForm, setShowForm] = useState(false);
   const [editPatient, setEditPatient] = useState(null);
-  const [currentPage, setCurrentPage] = useState(1);
+  //const [currentPage, setCurrentPage] = useState(1);
+    // currentPage now lives in Redux for DevTools visibility
+  const currentPage = useSelector((s) => s.patients.currentPage);
+
   const searchTimerRef = useRef(null);
 
   const { patients: rawPatients, loading, error, pagination: rawPagination, fetchPatients, deletePatient, clearError } = usePatients();
@@ -42,7 +47,7 @@ const PatientsListPage = () => {
     (overrides = {}) => {
       fetchPatients({
         page: currentPage,
-        per_page: 20,
+        per_page: 5,
         search,
         status: statusFilter || undefined,
         ...overrides,
@@ -68,7 +73,7 @@ const PatientsListPage = () => {
     clearTimeout(searchTimerRef.current);
     searchTimerRef.current = setTimeout(() => {
       setCurrentPage(1);
-      fetchPatients({ page: 1, per_page: 20, search: val, status: statusFilter || undefined });
+      fetchPatients({ page: 1, per_page: 5, search: val, status: statusFilter || undefined });
     }, 350);
   };
 
@@ -102,8 +107,14 @@ const PatientsListPage = () => {
     doFetch();
   };
 
+  // const handlePageChange = (p) => {
+  //   setCurrentPage(p);
+  // };
+  const dispatch = useDispatch();
+
   const handlePageChange = (p) => {
-    setCurrentPage(p);
+    dispatch(setCurrentPage(p));   // → SET_CURRENT_PAGE in DevTools
+    doFetch({ page: p });          // fetch only if not cached (saga checks cache)
   };
 
   const handleReload = () => {

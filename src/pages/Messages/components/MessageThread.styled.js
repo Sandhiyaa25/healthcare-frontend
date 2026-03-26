@@ -32,6 +32,7 @@ export const MessageList = styled.div`
   display: flex;
   flex-direction: column;
   gap: 10px;
+  background: ${({ theme }) => theme.colors.bgBase};
 `;
 
 export const MessageBubble = styled.div`
@@ -44,7 +45,7 @@ export const MessageBubble = styled.div`
   border: ${({ $isMine, theme }) =>
     $isMine ? 'none' : `1px solid ${theme.colors.border}`};
   color: ${({ $isMine, theme }) =>
-    $isMine ? '#ffffff' : theme.colors.textPrimary};
+    $isMine ? theme.colors.textInverse : theme.colors.textPrimary};
 `;
 
 export const BubbleHeader = styled.div`
@@ -60,7 +61,7 @@ export const SenderName = styled.span`
   font-weight: 600;
   opacity: ${({ $isMine }) => ($isMine ? 0.9 : 1)};
   color: ${({ $isMine, theme }) =>
-    $isMine ? 'inherit' : theme.colors.textSecondary};
+    $isMine ? theme.colors.textInverse : theme.colors.textSecondary};
 `;
 
 const TYPE_COLORS = {
@@ -82,6 +83,7 @@ export const Timestamp = styled.span`
   font-size: 11px;
   opacity: 0.6;
   margin-left: auto;
+  color: inherit;
 `;
 
 export const BubbleText = styled.p`
