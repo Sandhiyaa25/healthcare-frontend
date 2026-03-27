@@ -32,18 +32,21 @@ function* checkAndQueue(label, action, endpoint, method, payload) {
 
 function* fetchPatientsSaga({ payload }) {
   try {
-    // Check cache first — avoid duplicate API call
-    const cache    = yield select((s) => s.patients.cache);
-    const page     = payload?.page ?? 1;
+    const cache = yield select((s) => s.patients.cache);
+    const page  = payload?.page ?? 1;
     if (cache[page]) {
-      // Already cached — serve from store, still prefetch next
-      yield put(fetchPatientsSuccess({ ...(cache[page] && { patients: cache[page] }), pagination: { current_page: page } }));
+      yield put(fetchPatientsSuccess({
+        patients:   cache[page].list,
+        pagination: cache[page].pagination,
+      }));
     } else {
       const res = yield call(fetchPatientsApi, payload);
       yield put(fetchPatientsSuccess(res.data?.data ?? []));
     }
-    // Non-blocking: prefetch next page in background
-    yield fork(prefetchPatientsSaga, { payload: { ...payload, page: page + 1 } });
+    const lastPage = yield select((s) => s.patients.pagination?.last_page);
+    if (!lastPage || page < lastPage) {
+      yield fork(prefetchPatientsSaga, { payload: { ...payload, page: page + 1 } });
+    }
   } catch (e) {
     yield put(fetchPatientsFailure(normalizeError(e).message));
   }
@@ -51,17 +54,16 @@ function* fetchPatientsSaga({ payload }) {
 
 function* prefetchPatientsSaga({ payload }) {
   try {
-    const cache   = yield select((s) => s.patients.cache);
-    const page    = payload?.page ?? 2;
-    if (cache[page]) return;  // Already cached — skip duplicate call
+    const cache = yield select((s) => s.patients.cache);
+    const page  = payload?.page ?? 2;
+    if (cache[page]) return;
     yield put(prefetchPatientsRequest());
-    const res = yield call(fetchPatientsApi, payload);
+    const res  = yield call(fetchPatientsApi, payload);
     const data = res.data?.data ?? {};
-    // Attach the page number so the reducer can key the cache correctly
+    const lastPage = data?.pagination?.last_page;
+    if (lastPage && page > lastPage) return;
     yield put(prefetchPatientsSuccess({ ...data, page }));
-  } catch (_) {
-    // Prefetch failure is silent — don't disrupt main flow
-  }
+  } catch (_) {}
 }
 
 function* fetchPatientSaga({ payload }) {

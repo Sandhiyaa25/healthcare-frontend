@@ -105,6 +105,16 @@ if (!form.role_id && form.role_id !== 0) {
     } catch(e) { setError(normalizeError(e).message); }
   };
 
+  const getStaffName = (s) => {
+  // first_name comes decrypted if StaffService decrypts it
+  // otherwise fall back to username which is never encrypted
+  if (s.first_name && s.first_name.length < 100) {
+    return `${s.first_name} ${s.last_name || ''}`.trim();
+  }
+  if (s.username) return s.username;
+  return `Staff #${s.id}`;
+};
+
 const filtered = staff.filter((s) => {
   if (!search) return true;
   const q    = search.toLowerCase();
@@ -121,15 +131,15 @@ const filtered = staff.filter((s) => {
   //   if (s.first_name)       return `${s.first_name} ${s.last_name||''}`.trim();
   //   return `User #${s.user_id}`;
   // };
-const getStaffName = (s) => {
-  // first_name comes decrypted if StaffService decrypts it
-  // otherwise fall back to username which is never encrypted
-  if (s.first_name && s.first_name.length < 100) {
-    return `${s.first_name} ${s.last_name || ''}`.trim();
-  }
-  if (s.username) return s.username;
-  return `Staff #${s.id}`;
-};
+// const getStaffName = (s) => {
+//   // first_name comes decrypted if StaffService decrypts it
+//   // otherwise fall back to username which is never encrypted
+//   if (s.first_name && s.first_name.length < 100) {
+//     return `${s.first_name} ${s.last_name || ''}`.trim();
+//   }
+//   if (s.username) return s.username;
+//   return `Staff #${s.id}`;
+// };
 
 const staffColumns = [
   {

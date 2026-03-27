@@ -46,12 +46,12 @@ const patientsSlice = createSlice({
     },
     fetchPatientsSuccess: (state, { payload }) => {
       state.loading    = false;
-      const list = payload?.patients ?? payload?.data ?? (Array.isArray(payload) ? payload : []);
+      const list       = payload?.patients ?? payload?.data ?? (Array.isArray(payload) ? payload : []);
+      const pagination = payload?.pagination ?? {};
       state.list       = list;
-      state.pagination = payload?.pagination ?? {};
-      // Store in cache keyed by page number
-      const page = payload?.pagination?.current_page ?? state.currentPage;
-      state.cache[page] = list;
+      state.pagination = pagination;
+      const page       = pagination?.current_page ?? state.currentPage;
+      state.cache[page] = { list, pagination };
     },
     fetchPatientsFailure: (state, { payload }) => {
       state.loading = false;
@@ -64,18 +64,19 @@ const patientsSlice = createSlice({
     },
     prefetchPatientsSuccess: (state, { payload }) => {
       state.prefetching = false;
-      const list = payload?.patients ?? payload?.data ?? (Array.isArray(payload) ? payload : []);
-      const page = payload?.pagination?.current_page ?? payload?.page;
-      if (page) state.cache[page] = list;
+      const list       = payload?.patients ?? payload?.data ?? (Array.isArray(payload) ? payload : []);
+      const pagination = payload?.pagination ?? {};
+      const page       = pagination?.current_page ?? payload?.page;
+      if (page) state.cache[page] = { list, pagination };
     },
 
     // ─── PAGE NAV ─────────────────────────────────────────────────────────────
     setCurrentPage: (state, { payload }) => {
       state.currentPage = payload;
-      // Serve from cache instantly if available
       if (state.cache[payload]) {
-        state.list    = state.cache[payload];
-        state.loading = false;
+        state.list       = state.cache[payload].list;
+        state.pagination = state.cache[payload].pagination;
+        state.loading    = false;
       }
     },
 
@@ -153,6 +154,7 @@ const patientsSlice = createSlice({
     // ─── UTILS ────────────────────────────────────────────────────────────────
     clearItem:  (state) => { state.item  = null; },
     clearError: (state) => { state.error = null; },
+    clearCache: (state) => { state.cache = {}; },
   },
 });
 
@@ -172,7 +174,7 @@ export const {
   createPatientRequest, createPatientSuccess, createPatientFailure,
   updatePatientRequest, updatePatientSuccess, updatePatientFailure,
   deletePatientRequest, deletePatientSuccess, deletePatientFailure,
-  clearItem, clearError,
+  clearItem, clearError, clearCache,
 } = patientsSlice.actions;
 
 export default patientsSlice.reducer;

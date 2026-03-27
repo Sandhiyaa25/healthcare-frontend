@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { PlusOutlined, ReloadOutlined, EyeOutlined, DollarOutlined } from '@ant-design/icons';
 import useBilling from '../../hooks/useBilling';
@@ -9,6 +9,7 @@ import { formatDate } from '../../utils/dateUtils';
 import SummaryCards from './components/SummaryCards';
 import InvoiceForm from './components/InvoiceForm';
 import PaymentForm from './components/PaymentForm';
+import AdminRevenueDashboard from './AdminRevenueDashboard';
 import {
   Wrap, TopBar, Title, Controls, FilterSelect, IconBtn, AddBtn,
   Card, Table, Thead, Tbody, Tr, Th, Td, ActCell, ABtn,
@@ -43,6 +44,7 @@ const BillingListPage = () => {
   const [page, setPage]                 = useState(1);
   const [showInvoiceForm, setShowInvoiceForm] = useState(false);
   const [paymentTarget, setPaymentTarget]     = useState(null);
+  const statusFilterMounted = useRef(false);
 
   useEffect(() => {
     fetchInvoices({ page: 1, per_page: 5 });
@@ -50,6 +52,7 @@ const BillingListPage = () => {
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
+    if (!statusFilterMounted.current) { statusFilterMounted.current = true; return; }
     setPage(1);
     fetchInvoices({ status: statusFilter || undefined, page: 1, per_page: 5 });
   }, [statusFilter]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -64,10 +67,9 @@ const BillingListPage = () => {
     fetchSummary();
   };
 
-  // const canWrite = ['admin', 'receptionist', 'nurse'].includes(role);
+  if (role === 'admin') return <AdminRevenueDashboard />;
 
-const canCreate = ['admin', 'receptionist'].includes(role);
-const canView   = ['admin', 'doctor', 'nurse', 'receptionist', 'patient'].includes(role);
+  const canCreate = role === 'receptionist';
 
   return (
     <Wrap>

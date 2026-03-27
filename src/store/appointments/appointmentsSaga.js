@@ -97,7 +97,7 @@ function* prefetchAppointmentsSaga({ payload }) {
 
     if (lastPage && page > lastPage) return; // Page out of range — skip
 
-    yield put(prefetchSuccess(data));
+    yield put(prefetchSuccess({ ...data, page }));
   } catch (_) {
     // Prefetch failure is intentionally silent — never disrupts the UI.
   }

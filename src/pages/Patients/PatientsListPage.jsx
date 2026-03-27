@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
-import { setCurrentPage } from '../../store/patients/patientsSlice';
+import { setCurrentPage, clearCache } from '../../store/patients/patientsSlice';
 import { useNavigate } from 'react-router-dom';
 import { notification } from 'antd';
 import { PlusOutlined, SearchOutlined, ReloadOutlined } from '@ant-design/icons';
@@ -23,6 +23,7 @@ import {
 } from './PatientsListPage.styled';
 
 const PatientsListPage = () => {
+  const dispatch = useDispatch();
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [showForm, setShowForm] = useState(false);
@@ -36,6 +37,10 @@ const PatientsListPage = () => {
   const { patients: rawPatients, loading, error, pagination: rawPagination, fetchPatients, deletePatient, clearError } = usePatients();
   const { role } = useAuth();
   const navigate = useNavigate();
+
+  const canAdd    = ['receptionist', 'nurse'].includes(role);
+  const canEdit   = ['doctor', 'nurse', 'receptionist'].includes(role);
+  const canDelete = false;
 
   // The saga dispatches fetchPatientsSuccess(res.data?.data) which is { patients, pagination }.
   // The slice reducer sets list = payload.data || payload, so list ends up as the object.
@@ -72,7 +77,8 @@ const PatientsListPage = () => {
     setSearch(val);
     clearTimeout(searchTimerRef.current);
     searchTimerRef.current = setTimeout(() => {
-      setCurrentPage(1);
+      dispatch(setCurrentPage(1));
+      dispatch(clearCache());
       fetchPatients({ page: 1, per_page: 5, search: val, status: statusFilter || undefined });
     }, 350);
   };
@@ -110,14 +116,13 @@ const PatientsListPage = () => {
   // const handlePageChange = (p) => {
   //   setCurrentPage(p);
   // };
-  const dispatch = useDispatch();
 
   const handlePageChange = (p) => {
-    dispatch(setCurrentPage(p));   // → SET_CURRENT_PAGE in DevTools
-    doFetch({ page: p });          // fetch only if not cached (saga checks cache)
+    dispatch(setCurrentPage(p));
   };
 
   const handleReload = () => {
+    dispatch(clearCache());
     doFetch();
   };
 
@@ -134,7 +139,7 @@ const PatientsListPage = () => {
               placeholder="Search by name or email..."
             />
           </SearchBox>
-          <StatusSelect value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
+          <StatusSelect value={statusFilter} onChange={(e) => { dispatch(clearCache()); setStatusFilter(e.target.value); }}>
             <option value="">All Status</option>
             <option value="active">Active</option>
             <option value="inactive">Inactive</option>
@@ -143,9 +148,11 @@ const PatientsListPage = () => {
           <ReloadButton onClick={handleReload}>
             <ReloadOutlined />
           </ReloadButton>
-          <AddButton onClick={handleCreate}>
-            <PlusOutlined /> Add Patient
-          </AddButton>
+          {canAdd && (
+            <AddButton onClick={handleCreate}>
+              <PlusOutlined /> Add Patient
+            </AddButton>
+          )}
         </Controls>
       </TopBar>
 
@@ -158,6 +165,8 @@ const PatientsListPage = () => {
           patients={patients}
           loading={loading}
           role={role}
+          canEdit={canEdit}
+          canDelete={canDelete}
           onView={handleView}
           onEdit={handleEdit}
           onDelete={handleDelete}

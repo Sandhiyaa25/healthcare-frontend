@@ -1,6 +1,7 @@
 import React from 'react';
 import { Table, Popconfirm } from 'antd';
-import { EyeOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
+import { EyeOutlined, EditOutlined, DeleteOutlined, LockOutlined } from '@ant-design/icons';
+import { Tooltip } from 'antd';
 import Badge from '../../../components/ui/Badge/Badge';
 import { formatDate } from '../../../utils/dateUtils';
 import {
@@ -24,6 +25,8 @@ const PatientTable = ({
   patients,
   loading,
   role,
+  canEdit,
+  canDelete,
   onView,
   onEdit,
   onDelete,
@@ -84,10 +87,18 @@ const PatientTable = ({
           <ActionBtn title="View" onClick={() => onView(row)}>
             <EyeOutlined />
           </ActionBtn>
-          <ActionBtn title="Edit" onClick={() => onEdit(row)}>
-            <EditOutlined />
-          </ActionBtn>
-          {role === 'admin' && (
+          {canEdit ? (
+            <ActionBtn title="Edit" onClick={() => onEdit(row)}>
+              <EditOutlined />
+            </ActionBtn>
+          ) : (
+            <Tooltip title="View only — your role cannot edit patients">
+              <ActionBtn style={{ opacity: 0.45, cursor: 'default' }}>
+                <LockOutlined />
+              </ActionBtn>
+            </Tooltip>
+          )}
+          {canDelete && (
             <Popconfirm
               title="Delete this patient?"
               description="This action cannot be undone."

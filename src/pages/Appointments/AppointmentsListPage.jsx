@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
-import { setCurrentPage } from '../../store/appointments/appointmentsSlice';
+import { setCurrentPage, clearCache } from '../../store/appointments/appointmentsSlice';
 
 import { useNavigate } from 'react-router-dom';
 import { notification } from 'antd';
@@ -87,16 +87,21 @@ const AppointmentsListPage = () => {
   // BUG FIX: Filter changes must use dispatch(setCurrentPage(1)), not the bare
   // imported action creator (which is just a function, not a dispatch call).
   const handleStatusChange = (e) => {
+    dispatch(clearCache());
     setStatusFilter(e.target.value);
     dispatch(setCurrentPage(1));
   };
 
   const handleDateChange = (e) => {
+    dispatch(clearCache());
     setDateFilter(e.target.value);
     dispatch(setCurrentPage(1));
   };
 
-  const handleReload = () => doFetch(currentPage);
+  const handleReload = () => {
+    dispatch(clearCache());
+    doFetch(currentPage);
+  };
 
   return (
     <PageWrap>

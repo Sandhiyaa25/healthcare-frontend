@@ -306,7 +306,10 @@ const UsersListPage = () => {
     (u.email      || '').toLowerCase().includes(search.toLowerCase())
   );
 
-  const f = (k) => (e) => setForm((p) => ({ ...p, [k]: e.target.value }));
+  const f = (k) => (e) => {
+    setForm((p) => ({ ...p, [k]: e.target.value }));
+    setFormErrors((p) => ({ ...p, [k]: undefined }));
+  };
 
   const displayName = (u) => u?.first_name
     ? `${u.first_name} ${u.last_name || ''}`.trim()

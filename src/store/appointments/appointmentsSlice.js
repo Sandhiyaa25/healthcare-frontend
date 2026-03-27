@@ -164,6 +164,7 @@ const appointmentsSlice = createSlice({
     clearConflict: (state)              => { state.conflict = null; },
     clearItem:     (state)              => { state.item = null; },
     clearError:    (state)              => { state.error = null; },
+    clearCache:    (state)              => { state.cache = {}; },
   },
 });
 
@@ -177,7 +178,7 @@ export const {
   cancelRequest, cancelSuccess, cancelFailure,
   statusRequest, statusSuccess, statusFailure,
   setConflict, clearConflict,
-  clearItem, clearError,
+  clearItem, clearError, clearCache,
 } = appointmentsSlice.actions;
 
 export default appointmentsSlice.reducer;

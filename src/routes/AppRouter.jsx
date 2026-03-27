@@ -111,26 +111,28 @@ const AppRouter = () => (
           />
 
           {/* ── Appointment Module ──────────────────────────────────── */}
+          {/* Admin/Doctor/Nurse/Receptionist: full appointments management  */}
+          {/* Patient: same page, API scopes to their own appointments       */}
           <Route path="appointments" element={<AppointmentsListPage />} />
           <Route path="appointments/:id" element={<AppointmentDetailPage />} />
 
-          {/* ── Coming Soon placeholders ────────────────────────────── */}
-          {/* <Route path="prescriptions/*" element={<ComingSoon title="Prescriptions" />} /> */}
+          {/* ── Prescriptions ───────────────────────────────────────────── */}
+          {/* Admin excluded — clinical, not operational                     */}
           <Route
             path="prescriptions/*"
             element={
-              <RoleGuard allowedRoles={['admin', 'doctor', 'nurse', 'pharmacist', 'patient']}>
+              <RoleGuard allowedRoles={['doctor', 'nurse', 'pharmacist', 'patient']}>
                 <PrescriptionsListPage />
               </RoleGuard>
             }
           />
-          {/* <Route path="billing"          element={<BillingListPage />} /> */}
-          {/* <Route path="billing/:id"     element={<InvoiceDetailPage />} /> */}
-
+          {/* ── Billing ─────────────────────────────────────────────── */}
+          {/* Admin + Receptionist: manage all invoices                      */}
+          {/* Patient: same page, API scopes to their own invoices           */}
           <Route
             path="billing"
             element={
-              <RoleGuard allowedRoles={['admin', 'doctor', 'nurse', 'receptionist', 'patient']}>
+              <RoleGuard allowedRoles={['admin', 'receptionist', 'patient']}>
                 <BillingListPage />
               </RoleGuard>
             }
@@ -138,27 +140,40 @@ const AppRouter = () => (
           <Route
             path="billing/:id"
             element={
-              <RoleGuard allowedRoles={['admin', 'doctor', 'nurse', 'receptionist', 'patient']}>
+              <RoleGuard allowedRoles={['admin', 'receptionist', 'patient']}>
                 <InvoiceDetailPage />
               </RoleGuard>
             }
           />
 
-          <Route path="messages/*" element={<MessagesPage />} />
-          
+          {/* ── Messages ────────────────────────────────────────────── */}
+          {/* Admin excluded — clinical doctor↔patient communication      */}
+          <Route
+            path="messages/*"
+            element={
+              <RoleGuard allowedRoles={['doctor', 'nurse', 'receptionist', 'patient']}>
+                <MessagesPage />
+              </RoleGuard>
+            }
+          />
+
+          {/* ── Calendar ─────────────────────────────────────────────── */}
           <Route
             path="calendar/*"
             element={
-              <RoleGuard allowedRoles={['admin', 'doctor', 'nurse', 'receptionist', 'patient']}>
+              <RoleGuard allowedRoles={['admin', 'doctor', 'nurse', 'receptionist']}>
                 <CalendarPage />
               </RoleGuard>
             }
           />
 
+          {/* ── Medical Records ──────────────────────────────────────── */}
+          {/* Admin excluded — PHI clinical data, doctor/nurse responsibility */}
+          {/* Patient: same page, API scopes to their own records            */}
           <Route
             path="records/*"
             element={
-              <RoleGuard allowedRoles={['admin', 'doctor', 'nurse', 'patient']}>
+              <RoleGuard allowedRoles={['doctor', 'nurse', 'patient']}>
                 <RecordsListPage />
               </RoleGuard>
             }

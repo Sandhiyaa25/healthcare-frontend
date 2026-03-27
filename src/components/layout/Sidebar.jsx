@@ -137,26 +137,127 @@ import {
 import useAuth from '../../hooks/useAuth';
 
 // ─── Nav config ───────────────────────────────────────────────────────────────
+// ─── Role Matrix (single source of truth) ────────────────────────────────────
+//
+//  admin        → operations oversight: patients, appointments, billing,
+//                 staff, users, calendar, settings
+//                 NOT messages/prescriptions/records (clinical — not admin's job)
+//
+//  doctor       → clinical care: appointments, prescriptions, records,
+//                 messages, calendar
+//
+//  nurse        → clinical assist: appointments, prescriptions, records,
+//                 messages, calendar
+//
+//  receptionist → front desk: patients, appointments, billing,
+//                 calendar, messages
+//
+//  pharmacist   → dispensing only: prescriptions
+//
+//  patient      → own health data: MY section (appointments, prescriptions,
+//                 records, billing) + messages
+//
+// ─────────────────────────────────────────────────────────────────────────────
+
 const NAV_ITEMS = [
+
+  // ── MAIN (all authenticated roles) ───────────────────────────────────────
   { section: 'Main' },
-  { key: '/dashboard', label: 'Dashboard', icon: <DashboardOutlined />, roles: [] },
+  {
+    key: '/dashboard', label: 'Dashboard', icon: <DashboardOutlined />,
+    roles: [], // empty = all roles
+  },
 
+  // ── CLINICAL ─────────────────────────────────────────────────────────────
+  // Admin sees patients + appointments for oversight, NOT prescriptions/records
   { section: 'Clinical' },
-  { key: '/patients',      label: 'Patients',        icon: <TeamOutlined />,         roles: ['admin','doctor','nurse','receptionist'] },
-  { key: '/appointments',  label: 'Appointments',    icon: <CalendarOutlined />,     roles: ['admin','doctor','nurse','receptionist','patient'] },
-  { key: '/prescriptions', label: 'Prescriptions',   icon: <ExperimentOutlined />,   roles: ['admin','doctor','nurse','pharmacist'] },
-  { key: '/records',       label: 'Medical Records', icon: <MedicineBoxOutlined />,  roles: ['admin','doctor','nurse'] },
+  {
+    key: '/patients', label: 'Patients', icon: <TeamOutlined />,
+    roles: ['admin', 'doctor', 'nurse', 'receptionist'],
+  },
+  {
+    key: '/appointments', label: 'Appointments', icon: <CalendarOutlined />,
+    roles: ['admin', 'doctor', 'nurse', 'receptionist'],
+    // Patient uses /my-appointments under MY HEALTH section below
+  },
+  {
+    key: '/prescriptions', label: 'Prescriptions', icon: <ExperimentOutlined />,
+    roles: ['doctor', 'nurse', 'pharmacist'],
+    // Admin excluded: clinical, not operational
+    // Patient sees their own prescriptions under MY HEALTH
+  },
+  {
+    key: '/records', label: 'Medical Records', icon: <MedicineBoxOutlined />,
+    roles: ['doctor', 'nurse'],
+    // Admin excluded: PHI clinical data — not admin's responsibility
+    // Patient sees their own records under MY HEALTH
+  },
 
+  // ── OPERATIONS ────────────────────────────────────────────────────────────
   { section: 'Operations' },
-  { key: '/billing',  label: 'Billing',   icon: <DollarOutlined />,  roles: ['admin','receptionist'] },
-  { key: '/staff',    label: 'Staff',     icon: <UserOutlined />,    roles: ['admin'] },
-  { key: '/calendar', label: 'Calendar',  icon: <CalendarOutlined />,roles: ['admin','doctor','nurse','receptionist','patient'] },
-  { key: '/messages', label: 'Messages',  icon: <MessageOutlined />, roles: ['admin','doctor','nurse','receptionist','patient'] },
+  {
+    key: '/billing', label: 'Billing', icon: <DollarOutlined />,
+    roles: ['admin', 'receptionist'],
+    // Patient sees their own bills under MY HEALTH
+  },
+  {
+    key: '/staff', label: 'Staff', icon: <UserOutlined />,
+    roles: ['admin'],
+  },
+  {
+    key: '/calendar', label: 'Calendar', icon: <CalendarOutlined />,
+    roles: ['admin', 'doctor', 'nurse', 'receptionist'],
+    // Patient has no calendar — their appointments are under MY HEALTH
+  },
+  {
+    key: '/messages', label: 'Messages', icon: <MessageOutlined />,
+    roles: ['doctor', 'nurse', 'receptionist', 'patient'],
+    // Admin excluded: messages are clinical doctor↔patient communication
+    // If admin needs oversight, that's an Audit Logs feature (separate module)
+  },
 
+  // ── ADMIN ─────────────────────────────────────────────────────────────────
   { section: 'Admin' },
-  { key: '/users',    label: 'Users',     icon: <FileTextOutlined />, roles: ['admin'] },
-  { key: '/settings', label: 'Settings',  icon: <SettingOutlined />,  roles: [] },
-  { key: '/profile',  label: 'My Profile',icon: <UserOutlined />,     roles: [] },
+  {
+    key: '/users', label: 'Users', icon: <FileTextOutlined />,
+    roles: ['admin'],
+  },
+  {
+    key: '/settings', label: 'Settings', icon: <SettingOutlined />,
+    roles: ['admin'],
+    // Settings is admin-only — branding, security, integrations
+  },
+
+  // ── MY HEALTH (patient-only) ──────────────────────────────────────────────
+  // Patients see their OWN data here — same pages as clinical, scoped by API
+  { section: 'My Health' },
+  {
+    key: '/appointments', label: 'My Appointments', icon: <CalendarOutlined />,
+    roles: ['patient'],
+  },
+  {
+    key: '/prescriptions', label: 'My Prescriptions', icon: <ExperimentOutlined />,
+    roles: ['patient'],
+  },
+  {
+    key: '/records', label: 'My Records', icon: <MedicineBoxOutlined />,
+    roles: ['patient'],
+  },
+  {
+    key: '/billing', label: 'My Bills', icon: <DollarOutlined />,
+    roles: ['patient'],
+  },
+  {
+    key: '/messages', label: 'Messages', icon: <MessageOutlined />,
+    roles: ['patient'],
+  },
+
+  // ── PROFILE (all roles) ───────────────────────────────────────────────────
+  { section: 'Account' },
+  {
+    key: '/profile', label: 'My Profile', icon: <UserOutlined />,
+    roles: [], // all roles
+  },
 ];
 
 // ─── Derive 2-letter initials from tenant name ────────────────────────────────

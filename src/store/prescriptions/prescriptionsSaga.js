@@ -46,7 +46,11 @@ function* fetchPrescriptionsSaga({ payload = {} }) {
     }
 
     // Non-blocking prefetch of the next page
-    yield fork(prefetchPrescriptionsSaga, { payload: { ...payload, page: page + 1, perPage } });
+    const totalFromCache = yield select((s) => s.prescriptions.pagination?.total);
+    const totalPages     = totalFromCache ? Math.ceil(totalFromCache / (perPage || 5)) : null;
+    if (!totalPages || page < totalPages) {
+      yield fork(prefetchPrescriptionsSaga, { payload: { ...payload, page: page + 1, perPage } });
+    }
 
   } catch (e) {
     yield put(fetchPrescriptionsFailure(normalizeError(e).message));
